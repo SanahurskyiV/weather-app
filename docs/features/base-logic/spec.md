@@ -22,7 +22,7 @@ A Bot user (in practice the owner and a few acquaintances, an assumption per `id
 
 Why now: the project skeleton (roadmap step 1) exists, and this is roadmap step 2, the first real feature. Steps 3 (alerts) and 4 (quiet hours) can't start until a Bot user has a Home city with a location and timezone stored. There is no external deadline (`idea-brief.md` §4).
 
-Committed approach (owner-accepted direction, `idea-brief.md` §7, sharpened in the 2026-11-05 deep-dive): a Bot user sets their Home city with one command that carries the city name. The bot takes the best match, stores it, and replies with the full resolved name and timezone, so a wrong guess is visible at once and can be fixed by adding a country. A second command returns a compact Current weather message for the Home city. The bot works only in private chats, in English, with metric units. Every message is handled on its own, with no back-and-forth conversation to remember. This fits the brief's success criterion, "anyone can use the live bot within seconds" (`idea-brief.md` §2). The independent failure-mode review flagged one sharpest risk: a single chat could use up the shared daily weather-source budget, which step 3's alerts also depend on. That risk is answered by a per-Bot-user request cap (AC-16) plus a hard bot-wide daily budget (AC-17). Competitive research was not re-run, because the brief's accepted direction already settles the approach and this step adds no product bet.
+Committed approach (owner-accepted direction, `idea-brief.md` §7, sharpened in the 2026-11-05 deep-dive): a Bot user sets their Home city with one command that carries the city name. The bot takes the best match (the most populous populated place among the candidates; regions and countries are never chosen, see AC-06), stores it, and replies with the full resolved name and timezone, so a wrong guess is visible at once and can be fixed by adding a country. A second command returns a compact Current weather message for the Home city. The commands are `/city <name>` (called "the set-city command" in §5), `/weather` ("ask for the weather") and `/start` (the greeting). The greeting and help replies use these exact names. The bot works only in private chats, in English, with metric units. Every message is handled on its own, with no back-and-forth conversation to remember. This fits the brief's success criterion, "anyone can use the live bot within seconds" (`idea-brief.md` §2). The independent failure-mode review flagged one sharpest risk: a single chat could use up the shared daily weather-source budget, which step 3's alerts also depend on. That risk is answered by a per-Bot-user request cap (AC-16) plus a hard bot-wide daily budget (AC-17). Competitive research was not re-run, because the brief's accepted direction already settles the approach and this step adds no product bet.
 
 Traceability:
 - Owner constraints carried from `idea-brief.md` §5: free hosting only, Telegram only, no i18n. The free-plan limits in `CLAUDE.md` (CPU per request, outbound calls per invocation, daily weather-source quota) bound how much work one message may do.
@@ -125,7 +125,7 @@ Tag each AC with its US-NN. Concurrent edge → add as AC-NNb, still in business
 
 **Given** a Bot user in a private chat who has no Home city yet
 **When** the Bot user sends the set-city command with the name "Kyiv"
-**Then** the system stores the best match as their Home city and replies with its full resolved name (city, region, country) and its timezone, plus how to ask for the weather
+**Then** the system stores the best match as their Home city and replies with its full resolved name (city, region, country) and its timezone, plus how to ask for the weather. The resolved name is always shown in English, whatever alphabet the Bot user typed ("Київ" → "Kyiv, Kyiv City, Ukraine"). When the place has no region, that part is left out.
 
 ### AC-02 (US-01) — happy (replace)
 
@@ -142,8 +142,14 @@ Tag each AC with its US-NN. Concurrent edge → add as AC-NNb, still in business
 ### AC-04 (US-01) — error (no such place)
 
 **Given** a Bot user in a private chat
-**When** the Bot user sets a name that matches no populated place (for example "Xyzzyqq"), or a name longer than 100 characters
-**Then** nothing is stored and the system replies that it couldn't find that place and suggests checking the spelling or adding a country. A name in any alphabet is looked up as typed.
+**When** the Bot user sets a name that matches no populated place (for example "Xyzzyqq"), or a name longer than 100 characters (counted as visible characters, in any alphabet)
+**Then** nothing is stored and the system replies that it couldn't find that place and suggests checking the spelling or adding a country. A name in any alphabet is looked up as typed. A name longer than 100 characters is refused without any lookup and does not count toward the limits in AC-16 and AC-17.
+
+### AC-04b (US-01) — error (place lookup unavailable)
+
+**Given** a Bot user in a private chat, and the place lookup is down or does not answer within 1.5 seconds
+**When** the Bot user sets a city
+**Then** nothing is stored and the system replies that this is temporarily unavailable and to try again in a few minutes, using the AC-10 wording, not the "couldn't find that place" reply. "Couldn't find that place" is used only when the lookup answered and found no match.
 
 ### AC-05 (US-01) — domain invariant
 
@@ -161,13 +167,13 @@ Tag each AC with its US-NN. Concurrent edge → add as AC-NNb, still in business
 
 **Given** a Bot user whose Home city is Paris, France
 **When** the Bot user sets the city "Paris, US"
-**Then** the system stores the most populous Paris in the United States and replies with its full name and timezone
+**Then** the system stores the most populous Paris in the United States and replies with its full name and timezone. Only text after a comma is read as a country. If the country is not recognised ("Paris, XX"), or has no place of that name ("Paris, Japan"), or the text after the comma is not a country ("Paris, Texas"), the system gives the "couldn't find that place" reply (AC-04) and the Home city does not change. It never quietly falls back to a match in another country.
 
 ### AC-08 (US-02) — happy
 
 **Given** a Bot user whose Home city is Kyiv
 **When** the Bot user asks for the weather
-**Then** the system replies with: the Home city's name; the time of the reading in Kyiv local time; the conditions in words ("unknown conditions" when the source reports a condition the bot does not recognise); the temperature in °C; the feels-like temperature in °C; the wind speed in kilometres per hour; and the humidity in percent
+**Then** the system replies with: the Home city's name; the time of the reading in Kyiv local time; the conditions in words ("unknown conditions" when the source reports a condition the bot does not recognise); the temperature in °C; the feels-like temperature in °C; the wind speed in kilometres per hour; and the humidity in percent. All four numbers are rounded to the nearest whole number (for example "3 °C, feels like -1 °C, wind 14 kilometres per hour, humidity 81%").
 
 ### AC-09 (US-02) — cross-context
 
@@ -177,7 +183,7 @@ Tag each AC with its US-NN. Concurrent edge → add as AC-NNb, still in business
 
 ### AC-10 (US-02) — error (source unavailable)
 
-**Given** a Bot user whose Home city is Kyiv, and the weather source is down or does not answer in time
+**Given** a Bot user whose Home city is Kyiv, and the weather source is down or does not answer within 1.5 seconds
 **When** the Bot user asks for the weather
 **Then** the system replies that the weather is temporarily unavailable and to try again in a few minutes. The wording is different from the "couldn't find that place" reply.
 
@@ -190,14 +196,14 @@ Tag each AC with its US-NN. Concurrent edge → add as AC-NNb, still in business
 ### AC-12 (US-04) — error (not understood)
 
 **Given** a Bot user in a private chat
-**When** the Bot user sends plain text or a command the bot does not know
-**Then** the system replies with a short list of what it understands, including "send the set-city command followed by the city name", and stores nothing
+**When** the Bot user sends plain text, a command the bot does not know, or anything else it can't use (a sticker, photo, voice note or location pin)
+**Then** the system replies with a short list of what it understands, including "send the set-city command followed by the city name", and stores nothing. Edits to messages already sent get no reply.
 
 ### AC-13 (US-05) — authorization (not a private chat)
 
 **Given** the bot has been added to a group
 **When** any Bot user sends one of the bot's commands there
-**Then** nothing is stored or changed, and the system replies to that command once that it only works in a private chat. Other group messages get no reply, and the bot never posts in channels.
+**Then** nothing is stored or changed, and the system answers each such command with one reply saying the bot only works in a private chat. This applies only to the bot's own commands meant for this bot, not commands addressed to another bot. Other group messages get no reply, being added to a group triggers no message, and the bot never posts in channels.
 
 ### AC-14 (US-05) — authorization (one person's city is theirs alone)
 
@@ -211,17 +217,19 @@ Tag each AC with its US-NN. Concurrent edge → add as AC-NNb, still in business
 **When** the failure happens
 **Then** the Bot user still gets a plain-language reply ("something went wrong, please try again" for an unexpected fault), and the Operator can find exactly one log event for that request naming the failure kind and the chat. It never contains the bot token or the webhook secret.
 
+Every request, successful or failed, produces exactly one log event. It records the outcome (or the failure kind), the chat, the command, how many lookups were made, how long the request took, and the time of the reading shown when there is one. Every §6 measurement and §7 KPI is counted from these events.
+
 ### AC-16 (US-02) — error (too many requests)
 
-**Given** a Bot user who has already made 30 requests needing a place or weather lookup within the past hour
+**Given** a Bot user for whom the bot has already made 30 place or weather lookups within the past 60 minutes (a rolling window)
 **When** the Bot user sets a city or asks for the weather again
-**Then** no lookup is made, their Home city is unchanged, and the system replies that they are sending too many requests and to try again in a few minutes
+**Then** no lookup is made, their Home city is unchanged, and the system replies that they are sending too many requests and to try again later. Only lookups actually made count, whether or not a place was found. Requests blocked by this cap or by AC-17, blank names (AC-03), names that are too long (AC-04) and weather requests with no Home city (AC-09) do not count, so retrying while blocked never extends the block.
 
 ### AC-17 (US-02) — error (bot-wide daily budget used up)
 
 **Given** the bot has already made 5,000 place or weather lookups for Bot user requests during the current day (counted in UTC)
 **When** any Bot user sets a city or asks for the weather
-**Then** no lookup is made, their Home city is unchanged, and the system replies that the bot has reached its daily limit and to try again tomorrow. This keeps the rest of the weather source's free daily allowance for alerts.
+**Then** no lookup is made, their Home city is unchanged, and the system replies that the bot has reached its daily limit and to try again tomorrow. This keeps the rest of the weather source's free daily allowance for alerts. Every place and weather lookup the bot makes counts, including ones that fail or time out, because both kinds draw on the same daily allowance. Requests that arrive at the same moment may push the count past 5,000 by a few lookups. When a Bot user hits both this budget and their own limit (AC-16), they get this "daily limit" reply.
 
 ## 6. Non-functional requirements
 
@@ -232,10 +240,10 @@ Tag each AC with its US-NN. Concurrent edge → add as AC-NNb, still in business
 | Reply time p95, set-city and weather | ≤ 2 s from receiving the message to sending the reply | duration field on the per-request log event, weekly p95 |
 | CPU per message | ≤ 10 ms p99 (Workers Free hard limit; an overrun kills the request before it can reply) | Workers analytics, CPU time per invocation |
 | Outbound calls per message | ≤ 3 (one lookup, one reply, one spare; the platform cap is 50) | integration tests count the stubbed outbound calls |
-| Weather-source calls from this step | ≤ 5,000 a day in total, enforced (AC-17; half the free cap, leaving the rest for step 3 alerts) | daily count of lookup log events; integration test at the boundary |
-| Freshness of the reading shown | ≤ 30 min old, p95 | log event: reply time minus reading time |
-| Reply rate | ≥ 99% of private-chat messages get exactly one reply (catches a killed request getting none and a redelivery getting two) | log events: messages received vs. replies sent, monthly |
-| Per-Bot-user request cap | ≤ 30 lookup-needing requests per Bot user per hour (AC-16) | integration test at the boundary; log events per chat per hour |
+| Weather-source calls from this step | ≤ 5,000 a day in total, enforced (AC-17; half the free cap, leaving the rest for step 3 alerts) | daily sum of the lookup counts on the per-request log events; integration test at the boundary |
+| Freshness of the reading shown | ≤ 30 min old, p95. A monitored target only: an older reading is still shown, with its reading time (AC-08). | per-request log event: reply time minus reading time |
+| Reply rate | ≥ 99% of new private-chat messages, of any kind (edits excluded), get exactly one reply (catches a killed request getting none and a redelivery getting two) | log events: messages received vs. replies sent, monthly |
+| Per-Bot-user request cap | ≤ 30 lookups per Bot user in any rolling 60 minutes (AC-16) | integration test at the boundary; lookup counts on the per-request log events, per chat, over 60 minutes |
 
 ## 6.1 Security / privacy
 
@@ -257,8 +265,8 @@ Tag each AC with its US-NN. Concurrent edge → add as AC-NNb, still in business
 - **Abuse cases:**
   - Cross-user access, one Bot user trying to read or change another's city: impossible by construction, because there is no way to name another chat. The reply never mentions other Bot users (AC-14).
   - Forged updates, a request to the bot that did not come from Telegram: dropped silently. Nothing is stored and nothing is sent, so a forger learns nothing.
-  - Injection through the city name, where the text contains markup or control characters: treated as plain text. It is echoed back only as the place name the lookup resolved, never as raw formatting, and it is cut off at 100 characters (AC-04).
-  - Spam that burns the shared weather-source quota: rate limit of 30 lookup-needing requests per Bot user per hour (AC-16), plus a hard bot-wide budget of 5,000 lookups a day; once it is used up, everyone gets the "daily limit reached" reply (AC-17).
+  - Injection through the city name, where the text contains markup or control characters: treated as plain text. It is echoed back only as the place name the lookup resolved, never as raw formatting. A name longer than 100 characters is refused without a lookup (AC-04).
+  - Spam that burns the shared weather-source quota: rate limit of 30 lookups per Bot user in any rolling 60 minutes (AC-16), plus a hard bot-wide budget of 5,000 lookups a day; once it is used up, everyone gets the "daily limit reached" reply (AC-17).
   - Out-of-order or redelivered set-city (accepted risk): two quick set-city commands, or a late redelivery of an old one, can leave the earlier city stored. The last set-city processed wins, and the Bot user sees the result in the reply and can simply set the city again. Related to OQ-3.
   - Secret leakage through logs: log events never contain the bot token or the webhook secret (AC-15).
 - **Security review:** Required (light), at `sdd:review`. This is the first personal data stored and the first check that the webhook is genuine. Checklist: no secrets in logs or the repo; forged updates ignored; city-name text can't break reply formatting.
