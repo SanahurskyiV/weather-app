@@ -215,6 +215,204 @@ sequenceDiagram
 
 **Critical flow 2: ask for the weather (AC-08, AC-09, AC-10)**: the same shape. The use case first loads the Home city; if there is none, it replies "no city set" without touching the limits or making a lookup (AC-09). Otherwise it runs limits, then reserve, then one forecast call at the stored coordinates, and formats the reading in the Home city's timezone. `sdd:sequences` draws this and the remaining flows (group pointer, fallback, limits reached).
 
+The flows below come from `sdd:sequences` (2026-11-05). They use the generic participants `client` (the Telegram side, delivering updates and receiving replies), `service` (the weather-bot Worker), `data-store` and `external-system` (the place or weather source). Every flow runs inside the cross-cutting intake (flow A), so each update writes exactly one log event and gets at most one reply.
+
+### Cross-cutting: update intake and the one log event (AC-15, US-06)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as client
+    participant S as service
+    Note over C,S: Trigger: the client delivers one update for a message
+    C->>S: delivers an update with the shared secret
+    alt secret missing or wrong
+        S-->>C: rejects the delivery, no reply, no log event
+    else edited message
+        S->>S: writes one update log event marked as an edit
+        S-->>C: acknowledges with no reply
+    else update accepted
+        S->>S: starts the update log event (update id, chat, chat type, timer)
+        S->>S: routes by chat type and command (flows B to E)
+        alt handler finishes
+            S->>C: sends the handler's reply
+        else unexpected fault in any handler
+            S->>C: sends "something went wrong, please try again"
+            S->>S: records failure kind fault on the event
+        end
+        S->>S: writes exactly one update log event (outcome, lookups, duration, replied)
+        S-->>C: acknowledges the update
+    end
+    Note over S: Idempotency: none in v1 (SAD §11, spec OQ-3). The update id is logged, so duplicates are detectable.
+    Note over C,S: Retry: the client redelivers only when no acknowledgement arrives, and the service always acknowledges.
+    Note over S: Dead-letter: none. A failure ends as the fault reply plus a fault log event.
+    Note over C,S: Postcondition: every accepted update has exactly one log event, never the token or the secret
+```
+
+### Start greeting and not-understood fallback (AC-11, AC-12, US-04)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as client
+    participant S as service
+    participant D as data-store
+    Note over C,S: Precondition: a Bot user in a private chat, update accepted (flow A)
+    alt start command
+        C->>S: Bot user starts the bot
+        S->>D: load this chat's Home city
+        D-->>S: Home city or none
+        alt Home city set
+            S-->>C: greeting with how to set a city and ask for the weather, each with an example, naming the Home city
+        else no Home city
+            S-->>C: greeting with how to set a city and ask for the weather, each with an example
+        end
+    else plain text, unknown command, sticker, photo, voice note or location pin
+        C->>S: Bot user sends something the bot can't use
+        S-->>C: short list of what the bot understands, including "send the set-city command followed by the city name"
+    end
+    Note over C,S: Postcondition: nothing stored, no lookup made, one reply sent
+```
+
+### Group chat pointer (AC-13, US-05)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as client
+    participant S as service
+    Note over C,S: Precondition: the bot is a member of a group, or a channel exists
+    alt one of the bot's own commands addressed to this bot
+        C->>S: any Bot user sends a bot command in the group
+        S-->>C: one reply saying the bot only works in a private chat
+    else other group message, a command for another bot, or the bot being added
+        C->>S: delivers the group update
+        S->>S: ignores it, no reply
+    else channel post
+        C->>S: delivers the channel update
+        S->>S: ignores it, never posts in channels
+    end
+    Note over C,S: Postcondition: nothing stored or changed, no lookup made, at most one reply per command
+```
+
+### Set the Home city: replace, refine, refusals and limits (AC-02, AC-03, AC-06, AC-07, AC-14, AC-16, AC-17, US-01, US-03)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as client
+    participant S as service
+    participant D as data-store
+    participant X as external-system
+    Note over C,S: Precondition: a Bot user in a private chat sends the set-city command with a city query
+    C->>S: sets the city with a query, for example "Lviv", "Paris" or "Paris, US"
+    S->>S: parses the query (name, optional country after a comma)
+    alt blank name
+        S-->>C: how to use the command, with an example (AC-03)
+    else name over 100 characters, or the text after the comma is not a known country
+        S-->>C: couldn't find that place, check the spelling or add a country
+    else query parsed
+        S->>D: load this chat's Home city, today's lookup count and this chat's last-60-min count
+        D-->>S: current Home city and both counts
+        alt daily budget of 5000 used up (checked first)
+            S-->>C: the bot reached its daily limit, try again tomorrow (AC-17)
+        else this chat made 30 lookups in the past 60 minutes
+            S-->>C: too many requests, try again later (AC-16)
+        else within both limits
+            S->>D: reserve one lookup (day counter and chat lookup log)
+            Note over S,D: persists the lookup reservation (UTC day key, chat id, time) and prunes chat lookup rows older than 60 minutes
+            S->>X: find places by name, with the country filter when given
+            X-->>S: candidate places
+            S->>S: keep populated places, pick the most populous (AC-06, AC-07)
+            alt a place was picked
+                S->>D: replace this chat's Home city with the picked place
+                Note over S,D: persists the Home city keyed by chat id, one per chat (AC-02, AC-14)
+                S-->>C: full resolved name and timezone, plus a hint to add a country when the name matched several places
+            else no populated place in that country
+                S-->>C: couldn't find that place, your city is still the current one (AC-05, AC-07)
+            end
+        end
+    end
+    Note over C,S: Postcondition: the Home city changes only to a found place, and only for this chat. Other chats are never read or named.
+```
+
+### Ask for the weather (AC-08, AC-09, AC-10, AC-16, AC-17, US-02)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as client
+    participant S as service
+    participant D as data-store
+    participant X as external-system
+    Note over C,S: Precondition: a Bot user in a private chat
+    C->>S: asks for the weather
+    S->>D: load this chat's Home city
+    D-->>S: Home city or none
+    alt no Home city
+        S-->>C: no city set yet, how to set one with an example, no lookup made (AC-09)
+    else Home city set
+        S->>D: read today's lookup count and this chat's last-60-min count
+        D-->>S: both counts
+        alt daily budget of 5000 used up (checked first)
+            S-->>C: the bot reached its daily limit, try again tomorrow (AC-17)
+        else this chat made 30 lookups in the past 60 minutes
+            S-->>C: too many requests, try again later (AC-16)
+        else within both limits
+            S->>D: reserve one lookup (day counter and chat lookup log)
+            Note over S,D: persists the lookup reservation and prunes chat lookup rows older than 60 minutes
+            S->>X: read current conditions at the Home city's stored coordinates
+            alt reading returned within 1.5 s
+                X-->>S: current conditions and reading time
+                S-->>C: city name, reading time in local time, conditions in words, temperature, feels-like, wind, humidity, all rounded (AC-08)
+            else source down or no answer within 1.5 s
+                S-->>C: weather temporarily unavailable, try again in a few minutes (AC-10)
+            end
+        end
+    end
+    Note over C,S: Postcondition: the Home city is unchanged, at most one lookup made and counted
+```
+
+**Coverage (`sdd:sequences`, 2026-11-05).** Flow 1 is the existing set-city flow above. A to E are the flows drawn by `sdd:sequences`.
+
+| User story | Flows |
+|---|---|
+| US-01 Set my Home city | 1, D |
+| US-02 See the weather now | E |
+| US-03 Correct a wrong match | D |
+| US-04 Find my way in | B |
+| US-05 Told where the bot works | C |
+| US-06 Diagnose a failed request | A |
+
+| AC | Shown in |
+|---|---|
+| AC-01 | flow 1 happy path |
+| AC-02 | D, "a place was picked" branch (replace, one per chat) |
+| AC-03 | D, "blank name" branch |
+| AC-04 | flow 1 "no match" branch; D, "over 100 characters" branch |
+| AC-04b | flow 1, "down or no answer within 1.5 s" branch |
+| AC-05 | flow 1 failure branches; D, "no populated place in that country" branch |
+| AC-06 | D, pick the most populous populated place, plus the ambiguity hint |
+| AC-07 | D, country filter and "not a known country" / "no place in that country" branches |
+| AC-08 | E, "reading returned within 1.5 s" branch |
+| AC-09 | E, "no Home city" branch |
+| AC-10 | E, "source down or no answer" branch |
+| AC-11 | B, start command branches |
+| AC-12 | B, fallback branch |
+| AC-13 | C, all three branches |
+| AC-14 | D, Home city keyed by chat id, postcondition |
+| AC-15 | A, fault branch and the one log event |
+| AC-16 | D and E, "30 lookups in the past 60 minutes" branch |
+| AC-17 | D and E, "daily budget used up" branch (checked first) |
+
+**Flags for later stages (no ADRs written):**
+- Persist and read notes for `data-model`:
+  - the Home city is read and replaced by chat id, one row per chat;
+  - the lookup log is counted per chat over the last 60 minutes and pruned by time;
+  - the day counter is read and incremented by UTC day key.
+- Flow 1 (drawn by `design`) names concrete participants (Telegram Bot API, Open-Meteo Geocoding, D1 repos), while flows A to E use the generic vocabulary. It was left untouched because this stage is additive. Harmonising it is a deliberate manual edit, if wanted.
+- Flow A records the async-webhook decision: no idempotency, no retry and no dead-letter in v1 (SAD §11, spec OQ-3). If duplicates show up in the log data, de-duplication becomes a `decide-adr` candidate.
+
 ## 7. Deployment view
 
 No new deployment units. The feature ships inside the existing `weather-bot` Worker and its D1 database. It adds one or more forward migrations (staged by `sdd:data-model`) and no new bindings or secrets. `BOT_INFO` becomes required for production deploys (deploy checklist plus a startup warning; it stays optional in code, see §1 ¶4): without it, grammY calls `getMe` on every cold start, which uses an extra subrequest and CPU. The 15-minute cron (`scheduled`) is untouched.
