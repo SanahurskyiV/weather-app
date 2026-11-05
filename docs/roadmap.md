@@ -20,7 +20,7 @@ Anyone can open the live bot in Telegram, get the current weather for their city
 | # | Step | Source | Size | Status |
 |---|---|---|:---:|---|
 | 1 | Project skeleton: the folder layout, the Worker entry point with `/start`, the test setup, D1 migrations, lint and CI | `architecture-map.md` §Module inventory · `features/_scaffold/tasks.json` | S | idea |
-| 2 | Pick a city and get the weather now: set a city (geocoded, timezone stored) and ask for its current weather | `idea-brief.md` §7. Recommendation | S | idea |
+| 2 | Pick a city and get the weather now: set a city (geocoded, timezone stored) and ask for its current weather | `idea-brief.md` §7. Recommendation · [`features/base-logic/spec.md`](features/base-logic/spec.md) | S | spec'd |
 | 3 | Heads-up alerts: a check every 15 min warns about rain soon or a sharp temperature change, without repeating itself | `idea-brief.md` §7. Recommendation | M | idea |
 | 4 | Quiet hours: set a window in your own timezone, and alerts due inside it are held until it ends | `idea-brief.md` §7. Recommendation | S | idea |
 | 5 | Demo alert: `/demo_alert` runs a real alert through the actual pipeline on sample data, plus a README GIF | `idea-brief.md` §7. Recommendation | XS | idea |
