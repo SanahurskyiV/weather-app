@@ -5,7 +5,7 @@ updated_at: "2026-11-05"
 reflects_commit: "0262bf8"
 # machine-readable keys — filled by survey from the explorer's findings; "" = unknown, NEVER guessed.
 # implement's command-detection cascade reads test_cmd/lint_cmd right after the settings override.
-language: "typescript (strict) on Cloudflare Workers runtime, Node 22 LTS toolchain"
+language: "typescript (strict) on Cloudflare Workers runtime, Node 26 LTS toolchain"
 build_cmd: "npm run build"
 test_cmd: "npm test"
 lint_cmd: "npm run lint"
@@ -23,7 +23,7 @@ frontend: ""
 
 ## Stack
 
-- **Language / runtime:** TypeScript in `strict` mode, running on the Cloudflare Workers runtime (workerd). Local tooling uses Node 22 LTS and npm. See [ADR-0001](adr/0001-run-on-cloudflare-workers-with-webhook-and-cron.md).
+- **Language / runtime:** TypeScript in `strict` mode, running on the Cloudflare Workers runtime (workerd). Local tooling uses Node 26 LTS (`.nvmrc`) and npm. See [ADR-0001](adr/0001-run-on-cloudflare-workers-with-webhook-and-cron.md).
 - **Frameworks / libraries:**
   - grammY for the Telegram Bot API, using `webhookCallback` with the Cloudflare adapter.
   - Wrangler for local dev, deploys, secrets and D1 migrations.
@@ -77,7 +77,7 @@ These are target conventions; the paths are created by `scaffold`.
 - **Migrations:** `wrangler d1 migrations` with files `migrations/NNNN_<snake_name>.sql`. They are forward-only, because Wrangler has no down migrations, so a rollback is written as a new forward migration. See [ADR-0003](adr/0003-store-state-in-cloudflare-d1.md).
 - **Tests:** Vitest.
   - Unit tests live next to the code as `*.test.ts`, for domain and app with fake ports.
-  - Integration tests live in `test/integration/` and run inside workerd through `@cloudflare/vitest-pool-workers`, with a real local D1 and migrations applied.
+  - Integration tests live in `test/integration/` and run inside workerd through `@cloudflare/vitest-plugin` (the renamed `vitest-pool-workers`), with a real local D1 and migrations applied.
   - Outbound HTTP (Telegram, Open-Meteo) is stubbed with recorded fixtures in `test/fixtures/`.
 - **Inter-module communication:** direct in-process calls through ports, with no events or queues.
 - **Secrets / config:** `BOT_TOKEN` and `WEBHOOK_SECRET` are set with `wrangler secret put` in production and in a gitignored `.dev.vars` locally. The webhook checks Telegram's `X-Telegram-Bot-Api-Secret-Token` header. Nothing secret goes in `wrangler.toml`.
