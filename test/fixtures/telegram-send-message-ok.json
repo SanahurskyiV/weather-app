@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "result": {
+    "message_id": 2,
+    "date": 1793865601,
+    "chat": { "id": 4242, "type": "private", "first_name": "Test" },
+    "from": { "id": 123456, "is_bot": true, "first_name": "Weather Bot", "username": "weather_test_bot" },
+    "text": "Hi!"
+  }
+}

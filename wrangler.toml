@@ -1,0 +1,18 @@
+name = "weather-bot"
+main = "src/worker.ts"
+compatibility_date = "2026-11-01"
+
+# Runs the alert check (ADR-0001). Workers Free allows 5 cron triggers per account.
+[triggers]
+crons = ["*/15 * * * *"]
+
+# D1 database (ADR-0003). Replace database_id with the real one from
+# `wrangler d1 create weather-bot-db` before the first remote deploy.
+[[d1_databases]]
+binding = "DB"
+database_name = "weather-bot-db"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[observability]
+enabled = true

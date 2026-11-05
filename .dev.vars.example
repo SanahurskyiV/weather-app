@@ -1,0 +1,5 @@
+# Copy to .dev.vars (gitignored) for `wrangler dev`. In production use `wrangler secret put <NAME>`.
+BOT_TOKEN=123456:replace-with-your-bot-token
+WEBHOOK_SECRET=replace-with-a-random-string
+# Optional: JSON from Telegram getMe, saves one API call per cold start.
+# BOT_INFO={"id":123456,"is_bot":true,"first_name":"Weather Bot","username":"your_weather_bot","can_join_groups":true,"can_read_all_group_messages":false,"supports_inline_queries":false,"can_connect_to_business":false,"has_main_web_app":false}

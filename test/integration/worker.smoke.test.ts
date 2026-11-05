@@ -1,0 +1,66 @@
+import { createScheduledController } from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { pingDatabase } from "../../src/adapters/d1/health";
+import { START_MESSAGE } from "../../src/adapters/telegram/commands/start";
+import worker, { WEBHOOK_PATH } from "../../src/worker";
+import sendMessageOk from "../fixtures/telegram-send-message-ok.json";
+import startUpdate from "../fixtures/telegram-start-update.json";
+
+function webhookRequest(secret: string): Request {
+  return new Request(`https://bot.example${WEBHOOK_PATH}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "X-Telegram-Bot-Api-Secret-Token": secret },
+    body: JSON.stringify(startUpdate),
+  });
+}
+
+function stubTelegram() {
+  return vi.spyOn(globalThis, "fetch").mockImplementation(() => Promise.resolve(Response.json(sendMessageOk)));
+}
+
+describe("worker skeleton", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("boots and answers the health check", async () => {
+    const response = await exports.default.fetch("https://bot.example/health");
+    expect(response.status).toBe(200);
+  });
+
+  it("replies to /start through the Telegram API", async () => {
+    const fetchSpy = stubTelegram();
+
+    const response = await exports.default.fetch(webhookRequest(env.WEBHOOK_SECRET));
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const call = fetchSpy.mock.calls[0];
+    if (!call) throw new Error("Telegram API was not called");
+    const [input, init] = call;
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    expect(url).toContain("/sendMessage");
+    const body = JSON.parse(typeof init?.body === "string" ? init.body : "{}") as { chat_id: number; text: string };
+    expect(body).toMatchObject({ chat_id: 4242, text: START_MESSAGE });
+  });
+
+  it("rejects an update with the wrong secret token", async () => {
+    const fetchSpy = stubTelegram();
+
+    const response = await exports.default.fetch(webhookRequest("wrong-secret"));
+
+    expect(response.status).toBe(401);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("runs the scheduled handler without error", async () => {
+    await expect(worker.scheduled(createScheduledController({ cron: "*/15 * * * *" }))).resolves.toBeUndefined();
+  });
+
+  it("reaches D1 with migrations applied", async () => {
+    expect(await pingDatabase(env.DB)).toBe(true);
+    const applied = await env.DB.prepare("SELECT name FROM d1_migrations").all<{ name: string }>();
+    expect(applied.results.map((r) => r.name)).toContain("0001_init.sql");
+  });
+});
