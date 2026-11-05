@@ -15,11 +15,11 @@ ticket: "n/a"
 
 ## Context
 
-The bot's interesting logic is the alert rules, de-duplication and quiet hours across timezones. It is pure computation over forecast data and time. The repo is also a CV piece meant to show "solid backend engineer" (idea brief §2), and the hosting choice (ADR-0001) carries a CPU-limit risk that could force a move later. The code layout should keep that logic testable and independent of the platform.
+The bot's interesting logic is the alert rules, de-duplication and quiet hours across timezones. It is pure computation over forecast data and time. Clean, well-tested code is a stated goal (idea brief §2), and the hosting choice (ADR-0001) carries a CPU-limit risk that could force a move later. The code layout should keep that logic testable and independent of the platform.
 
 ## Decision drivers
 
-- Code quality is visible to reviewers (idea brief §2).
+- Clean, readable, well-tested code is a goal (idea brief §2).
 - Alert and quiet-hours logic must be easy to test with a controlled clock and forecast data.
 - Hosting may change if the Workers free limits fail (ADR-0001), so isolate the platform code.
 - Keep it small: one deployable and no framework ceremony.
@@ -39,7 +39,7 @@ The bot's interesting logic is the alert rules, de-duplication and quiet hours a
 **Positive**
 - Fast, deterministic unit tests for the core logic, through the `Clock` port and forecast fixtures.
 - Hosting or weather-provider swaps stay inside the adapters.
-- A layout that's easy to read and explain in a portfolio review.
+- A layout that's easy to read and explain.
 
 **Negative**
 - A bit more indirection (port interfaces) than a flat bot.

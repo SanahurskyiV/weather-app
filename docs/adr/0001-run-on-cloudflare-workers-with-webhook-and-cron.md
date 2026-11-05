@@ -21,7 +21,7 @@ weather-bot must be live around the clock. It answers Telegram commands and chec
 
 - Free hosting only (owner-required, idea brief §5).
 - Alerts must keep running with no inbound traffic, so nothing that sleeps.
-- A live bot reviewers can try in seconds ("ships real products" goal, idea brief §2).
+- A live bot anyone can try in seconds (idea brief §2).
 - Low ongoing upkeep for a single owner-operator (idea brief §6, risk 5).
 - TypeScript/Node ecosystem (owner-required).
 
@@ -40,7 +40,7 @@ weather-bot must be live around the clock. It answers Telegram commands and chec
 **Positive**
 - No idle sleep. Alerts run on schedule without keep-alive hacks.
 - No server, OS patching or process manager to run, and deploys are a single `wrangler deploy`.
-- Free requests (reportedly 100k a day) are far beyond what a portfolio bot needs.
+- Free requests (reportedly 100k a day) are far beyond what a personal bot needs.
 
 **Negative**
 - CPU time per invocation is limited on the free plan. Sources say 10 ms, and one says more, so check the official limits page during design. The alert check has to batch network calls and keep computation small, and may need to process subscribers in chunks across ticks.

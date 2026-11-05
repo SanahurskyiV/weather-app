@@ -41,14 +41,12 @@ This is the target baseline that `scaffold` builds and features fill in.
 ```mermaid
 C4Container
     title Target containers — weather-bot
-    Person(user, "Telegram user", "Subscribes to a city, receives forecasts and alerts")
-    Person(reviewer, "CV reviewer", "Tries the bot and runs /demo_alert")
+    Person(user, "Telegram user", "Subscribes to a city, receives forecasts and alerts, runs /demo_alert")
     System_Ext(telegram, "Telegram Bot API", "Delivers updates by webhook, sends messages")
     System_Ext(openmeteo, "Open-Meteo API", "Forecast and geocoding data")
     Container(worker, "weather-bot Worker", "TypeScript, grammY, Cloudflare Workers", "fetch handler for bot commands, scheduled handler for alert checks")
     ContainerDb(d1, "D1 database", "Cloudflare D1, SQLite", "Subscriptions, quiet hours, sent-alert log")
     Rel(user, telegram, "Chats with bot")
-    Rel(reviewer, telegram, "Chats with bot")
     Rel(telegram, worker, "Webhook POST", "HTTPS")
     Rel(worker, telegram, "sendMessage", "HTTPS")
     Rel(worker, openmeteo, "Batched forecast and geocoding requests", "HTTPS")
@@ -111,7 +109,7 @@ N/A: there's no frontend. Users interact through Telegram commands and messages,
 - **CPU per invocation is limited** on Workers Free. Sources conflict (10 ms vs. more), so check the official limits page before design. Network waits don't count. The scheduled alert check must batch Open-Meteo requests (multi-location) and keep per-run computation small. It may need to process subscribers in chunks across cron ticks.
 - **Subrequests per invocation are capped** on the free plan (reportedly 50). Batch outbound calls.
 - **Webhook only.** Long polling isn't possible on Workers, so local dev uses `wrangler dev` plus a tunnel, or integration tests.
-- **Open-Meteo is non-commercial and rate-limited** (reportedly 10k calls a day). Fine for a portfolio bot. Attribution goes in the README.
+- **Open-Meteo is non-commercial and rate-limited** (reportedly 10k calls a day). Fine for a personal bot. Attribution goes in the README.
 - **Cron cadence is 15 min.** "Rain within ~1h" alerts can therefore fire up to 15 min late, which is acceptable for v1.
 - **Forward-only migrations.** See Migrations above.
 
