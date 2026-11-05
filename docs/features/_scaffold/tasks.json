@@ -1,0 +1,68 @@
+{
+  "slug": "_scaffold",
+  "tasks": [
+    {
+      "id": "S1",
+      "title": "Create the npm project, strict TypeScript config, Wrangler config and src/ layer folders with a Worker entry point",
+      "layer": "scaffold",
+      "deps": [],
+      "acs": [],
+      "dod": "npm run build (wrangler deploy --dry-run --outdir dist) and npm run typecheck succeed. src/worker.ts exports fetch and scheduled handlers. src/domain, src/app, src/adapters exist per docs/architecture-map.md.",
+      "files_hint": ["package.json", "tsconfig.json", "wrangler.toml", "src/worker.ts", "src/domain/", "src/app/", "src/adapters/", ".dev.vars.example", ".gitignore"]
+    },
+    {
+      "id": "S2",
+      "title": "Wire grammY webhook handling with secret-token check and a /start command",
+      "layer": "scaffold",
+      "deps": ["S1"],
+      "acs": [],
+      "dod": "POST to the Worker with a valid X-Telegram-Bot-Api-Secret-Token and a /start update produces a sendMessage call (Telegram stubbed). An invalid secret returns 401. BOT_TOKEN and WEBHOOK_SECRET are read from env only, never committed.",
+      "files_hint": ["src/worker.ts", "src/adapters/telegram/bot.ts", "src/adapters/telegram/commands/start.ts"]
+    },
+    {
+      "id": "S3",
+      "title": "Wire the Vitest harness: unit tests plus integration tests in workerd via @cloudflare/vitest-pool-workers",
+      "layer": "scaffold",
+      "deps": ["S1"],
+      "acs": [],
+      "dod": "npm test runs green with a domain unit smoke test (src/domain/result.test.ts) and an integration smoke test that boots the Worker, calls fetch and scheduled, and asserts no error. Outbound HTTP is stubbed from test/fixtures/.",
+      "files_hint": ["vitest.config.ts", "src/domain/result.ts", "src/domain/result.test.ts", "test/integration/worker.smoke.test.ts", "test/fixtures/"]
+    },
+    {
+      "id": "S4",
+      "title": "Set up the D1 binding and wrangler d1 migrations with an initial empty migration applied in integration tests",
+      "layer": "scaffold",
+      "deps": ["S1", "S3"],
+      "acs": [],
+      "dod": "wrangler d1 migrations apply --local applies migrations/0001_init.sql cleanly. The integration test setup applies migrations to the local D1 and a SELECT 1 through the DB binding passes.",
+      "files_hint": ["wrangler.toml", "migrations/0001_init.sql", "test/integration/apply-migrations.ts"]
+    },
+    {
+      "id": "S5",
+      "title": "Add ESLint (typescript-eslint, layer import boundaries) and Prettier",
+      "layer": "scaffold",
+      "deps": ["S1"],
+      "acs": [],
+      "dod": "npm run lint passes on the skeleton. A test import from src/domain into src/adapters is reported as a lint error (boundary rule verified, then removed).",
+      "files_hint": ["eslint.config.js", ".prettierrc", "package.json"]
+    },
+    {
+      "id": "S6",
+      "title": "Add the GitHub Actions CI workflow (npm ci, typecheck, lint, test, build)",
+      "layer": "scaffold",
+      "deps": ["S3", "S4", "S5"],
+      "acs": [],
+      "dod": "The CI workflow is valid YAML and runs exactly the npm scripts recorded in docs/architecture-map.md frontmatter, on push and pull_request, on Node 22. No secrets are needed for CI.",
+      "files_hint": [".github/workflows/ci.yml"]
+    },
+    {
+      "id": "S7",
+      "title": "Write CLAUDE.md and README skeleton from the foundation conventions",
+      "layer": "scaffold",
+      "deps": ["S1"],
+      "acs": [],
+      "dod": "CLAUDE.md reflects the layer rules, Result-based errors, Clock port, UTC storage, forward-only migrations, secrets handling and npm scripts from docs/architecture-map.md. README covers the project purpose, local dev (wrangler dev plus tunnel), deploy steps (wrangler secret put, setWebhook) and Open-Meteo attribution.",
+      "files_hint": ["CLAUDE.md", "README.md"]
+    }
+  ]
+}
