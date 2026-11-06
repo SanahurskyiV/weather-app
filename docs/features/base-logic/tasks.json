@@ -18,7 +18,7 @@
         "test/integration/schema.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t01-promote-migrations.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T2",

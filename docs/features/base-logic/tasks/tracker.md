@@ -8,7 +8,7 @@
 
 | # | Task | Layer | Owner | Estimate | Blocked by | Status | Step |
 |---|---|---|---|---|---|---|---|
-| T1 | [Promote the three staged base-logic migrations](./t01-promote-migrations.md) | migration | Vlad S | S | — | todo | — |
+| T1 | [Promote the three staged base-logic migrations](./t01-promote-migrations.md) | migration | Vlad S | S | — | done | COMMIT |
 | T2 | [Parse the city query and recognise countries](./t02-parse-city-query.md) | domain | Vlad S | M | — | todo | — |
 | T3 | [Pick the best-matching populated place and format its name](./t03-pick-best-place.md) | domain | Vlad S | S | — | todo | — |
 | T4 | [Encode the lookup limits and UTC counting keys](./t04-usage-limits.md) | domain | Vlad S | S | — | todo | — |

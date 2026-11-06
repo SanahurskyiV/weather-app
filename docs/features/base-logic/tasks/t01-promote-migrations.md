@@ -9,8 +9,8 @@ files_hint: ["docs/features/base-logic/migrations/01_create_home_cities.sql", "d
 owner: "Vlad S"
 estimate: "S"
 context_budget: "M"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T1 — Promote the three staged base-logic migrations
 
