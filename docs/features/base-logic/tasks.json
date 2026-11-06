@@ -206,7 +206,7 @@
         "test/fixtures/open-meteo-forecast-kyiv.json"
       ],
       "file": "docs/features/base-logic/tasks/t10-open-meteo-adapters.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T11",

@@ -17,7 +17,7 @@
 | T7 | [Implement the set-home-city use case](./t07-set-home-city-use-case.md) | app | Vlad S | M | T2, T3, T4, T6 | done | COMMIT |
 | T8 | [Implement the get-current-weather use case](./t08-get-current-weather-use-case.md) | app | Vlad S | S | T4, T5, T6 | done | COMMIT |
 | T9 | [Implement the D1 HomeCityRepo and UsageCounter adapters](./t09-d1-adapters.md) | infra | Vlad S | M | T1, T6 | done | COMMIT |
-| T10 | [Implement the Open-Meteo geocoding and forecast adapters](./t10-open-meteo-adapters.md) | infra | Vlad S | M | T6 | todo | — |
+| T10 | [Implement the Open-Meteo geocoding and forecast adapters](./t10-open-meteo-adapters.md) | infra | Vlad S | M | T6 | done | COMMIT |
 | T11 | [Build the Telegram edge: request-log middleware, chat-type split, start, help and group replies](./t11-telegram-edge.md) | ports | Vlad S | M | T6, T9 | todo | — |
 | T12 | [Add the /city command and its replies](./t12-city-command.md) | ports | Vlad S | M | T7, T10, T11 | todo | — |
 | T13 | [Add the /weather command and its replies](./t13-weather-command.md) | ports | Vlad S | M | T8, T10, T11 | todo | — |

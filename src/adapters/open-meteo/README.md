@@ -1,5 +1,5 @@
 # Open-Meteo adapter
 
-Implements the `WeatherProvider` port (added by the first weather feature) against the
-Open-Meteo forecast and geocoding APIs. Free for non-commercial use, CC-BY 4.0 data:
-see https://open-meteo.com/en/terms.
+Implements the `PlaceLookup` (`geocoding.ts`) and `WeatherProvider` (`forecast.ts`) ports against the
+Open-Meteo geocoding and forecast APIs. Every call gives up after 1.5 s, and any failure is `unavailable`.
+Free for non-commercial use, CC-BY 4.0 data: see https://open-meteo.com/en/terms.

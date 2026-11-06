@@ -9,8 +9,8 @@ files_hint: ["src/adapters/open-meteo/geocoding.ts", "src/adapters/open-meteo/ge
 owner: "Vlad S"
 estimate: "M"
 context_budget: "M"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T10 — Implement the Open-Meteo geocoding and forecast adapters
 
