@@ -315,7 +315,7 @@
         "test/integration/e2e.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t14-composition-root.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T15",

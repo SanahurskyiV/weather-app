@@ -9,8 +9,8 @@ files_hint: ["src/worker.ts", "test/integration/worker.smoke.test.ts", "test/int
 owner: "Vlad S"
 estimate: "M"
 context_budget: "M"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T14 — Build the bot once per isolate and verify the per-message budgets end to end
 

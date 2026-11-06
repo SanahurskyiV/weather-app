@@ -123,6 +123,9 @@ export function stubOutbound(openMeteo?: OpenMeteoAnswer) {
     const url = urlOf(input);
     calls.push(url);
     if (url.hostname === "api.telegram.org") {
+      // Only made when BOT_INFO is not configured.
+      if (url.pathname.endsWith("/getMe"))
+        return Response.json({ ok: true, result: JSON.parse(env.BOT_INFO ?? "{}") as unknown });
       if (!url.pathname.endsWith("/sendMessage")) throw new Error(`unexpected Telegram call ${url.pathname}`);
       const raw = init?.body;
       replies.push(JSON.parse(typeof raw === "string" ? raw : "{}") as SentMessage);

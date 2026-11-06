@@ -12,11 +12,43 @@ import { makeGetHomeCity } from "./app/get-home-city";
 import { makeSetHomeCity } from "./app/set-home-city";
 
 // Composition root: builds adapters from env and hands them to use cases (ADR-0002).
+// Everything is built once per isolate and cached at module scope (SAD §8 Composition); env does not
+// change within an isolate. Nothing per-request is ever stored here.
 
 export const WEBHOOK_PATH = "/webhook";
 
+export interface App {
+  handleUpdate(request: Request): Promise<Response>;
+}
+
 function parseBotInfo(raw: string | undefined): UserFromGetMe | undefined {
   return raw ? (JSON.parse(raw) as UserFromGetMe) : undefined;
+}
+
+/** Builds adapters, use cases and the bot from env. Call through `getApp` outside tests. */
+export function buildApp(env: Cloudflare.Env): App {
+  const botInfo = parseBotInfo(env.BOT_INFO);
+  // Required for production deploys (SAD §7): without it grammY calls getMe on every cold start.
+  if (!botInfo) log("startup_warning", { reason: "BOT_INFO missing" });
+
+  const clock = systemClock;
+  const repo = makeD1HomeCityRepo(env.DB);
+  const counter = makeD1UsageCounter(env.DB);
+  const bot = createBot(env.BOT_TOKEN, botInfo, {
+    clock,
+    getHomeCity: makeGetHomeCity(repo),
+    setHomeCity: makeSetHomeCity({ repo, counter, lookup: makeOpenMeteoGeocoding(), clock }),
+    getCurrentWeather: makeGetCurrentWeather({ repo, counter, weather: makeOpenMeteoForecast(), clock }),
+  });
+  return { handleUpdate: webhookCallback(bot, "cloudflare-mod", { secretToken: env.WEBHOOK_SECRET }) };
+}
+
+let app: App | undefined;
+
+/** The app for this isolate, built on the first update. */
+export function getApp(env: Cloudflare.Env): App {
+  app ??= buildApp(env);
+  return app;
 }
 
 export default {
@@ -30,17 +62,8 @@ export default {
       return new Response("Not found", { status: 404 });
     }
 
-    const repo = makeD1HomeCityRepo(env.DB);
-    const counter = makeD1UsageCounter(env.DB);
-    const bot = createBot(env.BOT_TOKEN, parseBotInfo(env.BOT_INFO), {
-      clock: systemClock,
-      getHomeCity: makeGetHomeCity(repo),
-      setHomeCity: makeSetHomeCity({ repo, counter, lookup: makeOpenMeteoGeocoding(), clock: systemClock }),
-      getCurrentWeather: makeGetCurrentWeather({ repo, counter, weather: makeOpenMeteoForecast(), clock: systemClock }),
-    });
-    const handleUpdate = webhookCallback(bot, "cloudflare-mod", { secretToken: env.WEBHOOK_SECRET });
     try {
-      return await handleUpdate(request);
+      return await getApp(env).handleUpdate(request);
     } catch (error) {
       // Answer 200 anyway so Telegram does not keep redelivering the same update.
       log("webhook_error", { message: error instanceof Error ? error.message : String(error) });
