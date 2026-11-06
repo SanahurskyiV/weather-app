@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Place } from "../domain/place";
 import { err, ok, type Result } from "../domain/result";
 import type { CurrentWeather } from "../domain/weather";
@@ -106,5 +106,22 @@ describe("getCurrentWeather", () => {
 
     expect(await t.getCurrentWeather(CHAT)).toEqual(err({ kind: "unavailable" }));
     expect(t.reserved).toHaveLength(1);
+  });
+});
+
+describe("getCurrentWeather lookup reporting (AC-15, review R-13)", () => {
+  it.each<[string, Setup & { chat?: number }, number]>([
+    ["a reading", {}, 1],
+    ["a source failure", { answer: err("unavailable") }, 1],
+    ["no Home city", { chat: 100002 }, 0],
+    ["the daily limit", { daily: 5000 }, 0],
+    ["the per-user limit", { chatLastHour: 30 }, 0],
+  ])("tells onLookup about each lookup made, for %s", async (_label, { chat = CHAT, ...options }, expected) => {
+    const t = setup(options);
+    const onLookup = vi.fn();
+
+    await t.getCurrentWeather(chat, onLookup);
+
+    expect(onLookup).toHaveBeenCalledTimes(expected);
   });
 });

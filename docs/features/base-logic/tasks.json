@@ -485,7 +485,7 @@
         "src/adapters/telegram/commands/weather.ts"
       ],
       "file": "docs/features/base-logic/tasks/t22-weather-lookup-callback.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T23",

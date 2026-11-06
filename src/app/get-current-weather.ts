@@ -23,9 +23,10 @@ export interface GetCurrentWeatherDeps {
 /**
  * Current weather at the chat's Home city. Order (SAD §8 Request pipeline): load the Home city
  * (none → no counting, AC-09), check limits, reserve one lookup, then one forecast call.
+ * `onLookup` is told about every lookup made, for the request log.
  */
 export function makeGetCurrentWeather({ repo, counter, weather, clock }: GetCurrentWeatherDeps) {
-  return async (chatId: number): Promise<Result<HomeWeather, WeatherError>> => {
+  return async (chatId: number, onLookup: () => void = () => undefined): Promise<Result<HomeWeather, WeatherError>> => {
     const place = await repo.get(chatId);
     if (!place) return err({ kind: "no_home_city" });
 
@@ -36,6 +37,7 @@ export function makeGetCurrentWeather({ repo, counter, weather, clock }: GetCurr
 
     // Reserved before the call, so a failed or timed-out fetch still counts (AC-17).
     await counter.reserve(chatId, now);
+    onLookup();
     const reading = await weather.current(place.latitude, place.longitude);
     if (!reading.ok) return err({ kind: "unavailable" });
     return ok({ place, weather: reading.value });
