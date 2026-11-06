@@ -9,8 +9,8 @@ files_hint: ["src/adapters/telegram/request-log.ts", "src/adapters/telegram/requ
 owner: "Vlad S"
 estimate: "M"
 context_budget: "S"
-status: "todo"
-step: "—"
+status: "done"
+step: "COMMIT"
 ---
 # T21 — Keep the real outcome when the reply fails, name the fault, and prove no secret is logged
 

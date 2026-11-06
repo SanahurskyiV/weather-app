@@ -249,7 +249,34 @@ describe("unexpected fault (AC-15)", () => {
     expect(response.status).toBe(200);
     expect(out.replies).toEqual([{ chat_id: CHAT_A, text: FAULT_REPLY }]);
     expect(FAULT_REPLY.toLowerCase()).toContain("something went wrong, please try again");
-    expect(logs.updates()).toEqual([expect.objectContaining({ command: "start", outcome: "fault", replied: true })]);
+    expect(logs.updates()).toEqual([
+      expect.objectContaining({ command: "start", outcome: "fault", fault_kind: "Error", replied: true }),
+    ]);
+  });
+
+  it("keeps the real outcome when Telegram refuses the reply, and does not send a second one (review R-06)", async () => {
+    const out = stubOutbound(undefined, {
+      sendMessage: () =>
+        Response.json(
+          { ok: false, error_code: 403, description: "Forbidden: bot was blocked by the user" },
+          { status: 403 },
+        ),
+    });
+    const logs = captureLogs();
+
+    const response = await send(privateText("/start"));
+
+    expect(response.status).toBe(200);
+    expect(out.replies).toHaveLength(1);
+    expect(logs.updates()).toEqual([
+      expect.objectContaining({
+        command: "start",
+        outcome: "ok",
+        replied: false,
+        reply_failed: true,
+        fault_kind: "sendMessage 403",
+      }),
+    ]);
   });
 });
 

@@ -27,6 +27,10 @@ export interface UpdateEvent {
   lookups: number;
   replied: boolean;
   reading_time?: string;
+  /** The reply was attempted and Telegram (or the network) refused it; `outcome` keeps the handler's result. */
+  reply_failed?: boolean;
+  /** What went wrong, for a `fault` or a failed reply: the error's name, or the grammY method and error code. Never its message. */
+  fault_kind?: string;
 }
 
 export type BotContext = Context & { event: UpdateEvent };

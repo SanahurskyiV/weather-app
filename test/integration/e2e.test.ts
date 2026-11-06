@@ -143,6 +143,25 @@ describe("end to end", () => {
     expect(logs.lines.join("\n")).not.toContain(env.BOT_TOKEN);
   });
 
+  it("never logs the bot token or the webhook secret on the failure paths (AC-15, review R-09)", async () => {
+    await seedHomeCity(env.DB, { chat_id: CHAT_A });
+    // Search answers from the fixtures (nothing for "Xyzzyqq"); the forecast source is down.
+    stubOutbound((url) =>
+      url.hostname === "api.open-meteo.com" ? Response.json({ error: true }, { status: 500 }) : openMeteo(url),
+    );
+    const logs = captureLogs();
+
+    await send(privateText("/city Xyzzyqq"));
+    await send(privateText("/weather"));
+    vi.spyOn(env.DB, "batch").mockRejectedValue(new Error(`D1 down, token ${env.BOT_TOKEN}`));
+    await send(privateText("/weather"));
+
+    expect(logs.updates().map((e) => e.outcome)).toEqual(["not_found", "unavailable", "fault"]);
+    const all = logs.lines.join("\n");
+    expect(all).not.toContain(env.BOT_TOKEN);
+    expect(all).not.toContain(env.WEBHOOK_SECRET);
+  });
+
   it("logs a redelivered update twice under the same update id (accepted risk, SAD §11)", async () => {
     stubOutbound(openMeteo);
     const logs = captureLogs();

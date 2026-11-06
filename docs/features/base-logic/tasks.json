@@ -465,7 +465,7 @@
         "test/integration/e2e.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t21-request-log-reply-failures.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T22",

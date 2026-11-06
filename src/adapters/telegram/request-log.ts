@@ -1,4 +1,4 @@
-import type { Context, MiddlewareFn } from "grammy";
+import { type Context, GrammyError, type MiddlewareFn } from "grammy";
 import type { Clock } from "../../app/ports";
 import { log } from "../log";
 import type { BotContext, UpdateEvent } from "./context";
@@ -11,6 +11,12 @@ function commandOf(ctx: Context): string | null {
   const entity = (msg?.entities ?? msg?.caption_entities)?.[0];
   if (text === undefined || entity?.type !== "bot_command" || entity.offset !== 0) return null;
   return text.slice(1, entity.length).split("@")[0]?.toLowerCase() ?? null;
+}
+
+/** A secret-free label for an error: "sendMessage 403" for a Bot API refusal, else the error's name. */
+function faultKind(error: unknown): string {
+  if (error instanceof GrammyError) return `${error.method} ${String(error.error_code)}`;
+  return error instanceof Error ? error.name : "unknown";
 }
 
 /**
@@ -36,17 +42,26 @@ export function requestLog(clock: Clock): MiddlewareFn<BotContext> {
 
     const reply = ctx.reply.bind(ctx);
     ctx.reply = async (...args) => {
-      const sent = await reply(...args);
-      event.replied = true;
-      return sent;
+      try {
+        const sent = await reply(...args);
+        event.replied = true;
+        return sent;
+      } catch (error) {
+        event.reply_failed = true;
+        throw error;
+      }
     };
 
     try {
       if (!isEdit) await next();
-    } catch {
-      event.outcome = "fault";
-      if (ctx.chat?.type === "private" && !event.replied) {
-        await ctx.reply(FAULT_REPLY).catch(() => undefined);
+    } catch (error) {
+      event.fault_kind = faultKind(error);
+      // A refused reply is not a fault of the request: keep its outcome and do not try to send again (review R-06).
+      if (!event.reply_failed) {
+        event.outcome = "fault";
+        if (ctx.chat?.type === "private" && !event.replied) {
+          await ctx.reply(FAULT_REPLY).catch(() => undefined);
+        }
       }
     } finally {
       log("update", { ...event, duration_ms: clock.now().getTime() - started });

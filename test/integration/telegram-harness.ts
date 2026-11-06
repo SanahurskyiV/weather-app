@@ -112,10 +112,10 @@ function urlOf(input: RequestInfo | URL): URL {
 }
 
 /**
- * Stubs all outbound HTTP. Telegram `sendMessage` answers OK and is recorded; Open-Meteo calls go to
- * `openMeteo` (default: fail the test loudly). Anything else throws.
+ * Stubs all outbound HTTP. Telegram `sendMessage` is recorded and answers OK (or `sendMessage()` when given);
+ * Open-Meteo calls go to `openMeteo` (default: fail the test loudly). Anything else throws.
  */
-export function stubOutbound(openMeteo?: OpenMeteoAnswer) {
+export function stubOutbound(openMeteo?: OpenMeteoAnswer, { sendMessage }: { sendMessage?: () => Response } = {}) {
   const replies: SentMessage[] = [];
   const lookups: URL[] = [];
   const calls: URL[] = [];
@@ -129,7 +129,7 @@ export function stubOutbound(openMeteo?: OpenMeteoAnswer) {
       if (!url.pathname.endsWith("/sendMessage")) throw new Error(`unexpected Telegram call ${url.pathname}`);
       const raw = init?.body;
       replies.push(JSON.parse(typeof raw === "string" ? raw : "{}") as SentMessage);
-      return Response.json(sendMessageOk);
+      return sendMessage ? sendMessage() : Response.json(sendMessageOk);
     }
     if (url.hostname.endsWith("open-meteo.com")) {
       lookups.push(url);
@@ -153,6 +153,8 @@ export interface UpdateEvent {
   duration_ms: number;
   replied: boolean;
   reading_time?: string;
+  reply_failed?: boolean;
+  fault_kind?: string;
 }
 
 /** Captures every console.log line; `updates()` are the parsed `update` events. */
