@@ -9,8 +9,8 @@ files_hint: ["src/app/set-home-city.ts", "src/app/set-home-city.test.ts"]
 owner: "Vlad S"
 estimate: "M"
 context_budget: "M"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T7 — Implement the set-home-city use case
 

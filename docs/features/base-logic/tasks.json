@@ -134,7 +134,7 @@
         "src/app/set-home-city.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t07-set-home-city-use-case.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T8",
