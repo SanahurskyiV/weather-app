@@ -359,6 +359,155 @@
       ],
       "file": "docs/features/base-logic/tasks/t16-non-latin-city-names.md",
       "status": "done"
+    },
+    {
+      "id": "T17",
+      "title": "Record the two-lookup non-Latin set-city decision in ADR-0003 and the design docs",
+      "layer": "docs",
+      "deps": [
+        "T16"
+      ],
+      "acs": [
+        "AC-01",
+        "AC-16",
+        "AC-17"
+      ],
+      "dod": "Feature ADR-0003 (Accepted) records the localized search + English re-fetch, its cost (at most 2 lookups + 1 reply) and the Ukrainian-only Cyrillic limitation (OQ-4); sad.md §4/§5/§8 and the spec test-plan edge row say at most 2 lookups; prettier clean.",
+      "files_hint": [
+        "docs/features/base-logic/adr/0003-resolve-non-latin-names-with-a-localized-search.md",
+        "docs/features/base-logic/sad.md",
+        "docs/features/base-logic/spec.md"
+      ],
+      "file": "docs/features/base-logic/tasks/t17-adr-non-latin-lookups.md",
+      "status": "todo"
+    },
+    {
+      "id": "T18",
+      "title": "Pin the 1.5 s cutoff and tolerate malformed geocoder entries and unknown timezones",
+      "layer": "infra",
+      "deps": [
+        "T10",
+        "T16"
+      ],
+      "acs": [
+        "AC-04b",
+        "AC-10",
+        "AC-08"
+      ],
+      "dod": "A test asserts every outbound call uses AbortSignal.timeout(1500); `find` skips malformed entries and entries whose timezone Intl rejects, keeping the valid ones, and is `unavailable` only when the body/results are malformed or every entry is bad; `findById` with an unknown timezone is `unavailable`; npm test, lint, typecheck green.",
+      "files_hint": [
+        "src/adapters/open-meteo/http.ts",
+        "src/adapters/open-meteo/geocoding.ts",
+        "src/adapters/open-meteo/geocoding.test.ts",
+        "src/adapters/open-meteo/forecast.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t18-harden-open-meteo-adapters.md",
+      "status": "todo"
+    },
+    {
+      "id": "T19",
+      "title": "Name the current Home city on every \"couldn't find that place\" reply",
+      "layer": "app",
+      "deps": [
+        "T7",
+        "T12"
+      ],
+      "acs": [
+        "AC-05",
+        "AC-07"
+      ],
+      "dod": "`too_long` and `unknown_country` carry the current Home city (one D1 read, still no lookup and no limit read); the reply adds \"Your city is still X.\" when one is set; `blank` is unchanged; npm test, lint, typecheck green.",
+      "files_hint": [
+        "src/app/set-home-city.ts",
+        "src/app/set-home-city.test.ts",
+        "src/adapters/telegram/replies.ts",
+        "test/integration/city.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t19-still-city-on-every-not-found.md",
+      "status": "todo"
+    },
+    {
+      "id": "T20",
+      "title": "Drop forged updates silently and fail closed without a webhook secret",
+      "layer": "wiring",
+      "deps": [
+        "T14"
+      ],
+      "acs": [
+        "AC-15"
+      ],
+      "dod": "A wrong or missing secret header gets a bare 200 with no reason text and no bot work; an empty WEBHOOK_SECRET refuses every update (logged `startup_error`) instead of accepting all; SAD flow A wording matches spec §6.1; npm test, lint, typecheck green.",
+      "files_hint": [
+        "src/worker.ts",
+        "test/integration/telegram-edge.test.ts",
+        "test/integration/worker.smoke.test.ts",
+        "docs/features/base-logic/sad.md"
+      ],
+      "file": "docs/features/base-logic/tasks/t20-webhook-secret-fail-closed.md",
+      "status": "todo"
+    },
+    {
+      "id": "T21",
+      "title": "Keep the real outcome when the reply fails, name the fault, and prove no secret is logged",
+      "layer": "ports",
+      "deps": [
+        "T11"
+      ],
+      "acs": [
+        "AC-15"
+      ],
+      "dod": "A failing sendMessage sets `reply_failed: true`, keeps the handler's outcome and sends no second reply; a handler fault logs `fault` plus a secret-free `fault_kind`; a unit test of the collector covers ok, expected failure, fault and reply failure; an integration test over not_found, unavailable and storage fault asserts neither BOT_TOKEN nor WEBHOOK_SECRET in any log line; npm test, lint, typecheck green.",
+      "files_hint": [
+        "src/adapters/telegram/request-log.ts",
+        "src/adapters/telegram/request-log.test.ts",
+        "src/adapters/telegram/context.ts",
+        "test/integration/telegram-edge.test.ts",
+        "test/integration/e2e.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t21-request-log-reply-failures.md",
+      "status": "todo"
+    },
+    {
+      "id": "T22",
+      "title": "Let the get-current-weather use case report its lookups",
+      "layer": "app",
+      "deps": [
+        "T8",
+        "T13"
+      ],
+      "acs": [
+        "AC-15"
+      ],
+      "dod": "`getCurrentWeather(chatId, onLookup)` calls `onLookup` once per reserved lookup; the /weather handler counts through it instead of hard-coding; npm test, lint, typecheck green.",
+      "files_hint": [
+        "src/app/get-current-weather.ts",
+        "src/app/get-current-weather.test.ts",
+        "src/adapters/telegram/commands/weather.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t22-weather-lookup-callback.md",
+      "status": "todo"
+    },
+    {
+      "id": "T23",
+      "title": "Use the real command in the help reply and assert nothing is stored where the plan says so",
+      "layer": "ports",
+      "deps": [
+        "T11",
+        "T12"
+      ],
+      "acs": [
+        "AC-12",
+        "AC-04b",
+        "AC-17"
+      ],
+      "dod": "The help reply says \"send /city followed by the city name\" (asserted); the edit, lookup-hang and daily-limit tests assert the Home city is unchanged; npm test, lint, typecheck green.",
+      "files_hint": [
+        "src/adapters/telegram/replies.ts",
+        "test/integration/telegram-edge.test.ts",
+        "test/integration/city.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t23-help-wording-and-storage-asserts.md",
+      "status": "todo"
     }
   ]
 }

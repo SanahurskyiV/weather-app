@@ -24,5 +24,12 @@
 | T14 | [Build the bot once per isolate and verify the per-message budgets end to end](./t14-composition-root.md) | wiring | Vlad S | M | T12, T13 | done | COMMIT |
 | T15 | [Update the README for the new commands and the BOT_INFO deploy step](./t15-readme.md) | docs | Vlad S | S | — | done | COMMIT |
 | T16 | [Resolve non-Latin set-city queries with a localized search and an English re-fetch](./t16-non-latin-city-names.md) | app | Vlad S | S | T7, T10 | done | COMMIT |
+| T17 | [Record the two-lookup non-Latin set-city decision in ADR-0003 and the design docs](./t17-adr-non-latin-lookups.md) | docs | Vlad S | S | T16 | todo | — |
+| T18 | [Pin the 1.5 s cutoff and tolerate malformed geocoder entries and unknown timezones](./t18-harden-open-meteo-adapters.md) | infra | Vlad S | S | T10, T16 | todo | — |
+| T19 | [Name the current Home city on every "couldn't find that place" reply](./t19-still-city-on-every-not-found.md) | app | Vlad S | S | T7, T12 | todo | — |
+| T20 | [Drop forged updates silently and fail closed without a webhook secret](./t20-webhook-secret-fail-closed.md) | wiring | Vlad S | S | T14 | todo | — |
+| T21 | [Keep the real outcome when the reply fails, name the fault, and prove no secret is logged](./t21-request-log-reply-failures.md) | ports | Vlad S | M | T11 | todo | — |
+| T22 | [Let the get-current-weather use case report its lookups](./t22-weather-lookup-callback.md) | app | Vlad S | S | T8, T13 | todo | — |
+| T23 | [Use the real command in the help reply and assert nothing is stored where the plan says so](./t23-help-wording-and-storage-asserts.md) | ports | Vlad S | S | T11, T12 | todo | — |
 
-**Total:** 16 tasks, ~12 person-days (S ≈ ½ day, M ≈ 1 day).
+**Total:** 23 tasks (T17–T23 are review follow-ups), ~16 person-days (S ≈ ½ day, M ≈ 1 day).
