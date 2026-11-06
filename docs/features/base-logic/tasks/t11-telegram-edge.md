@@ -9,8 +9,8 @@ files_hint: ["src/adapters/telegram/request-log.ts", "src/adapters/telegram/bot.
 owner: "Vlad S"
 estimate: "M"
 context_budget: "M"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T11 — Build the Telegram edge: request-log middleware, chat-type split, start, help and group replies
 

@@ -2,7 +2,7 @@ import { createScheduledController } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pingDatabase } from "../../src/adapters/d1/health";
-import { START_MESSAGE } from "../../src/adapters/telegram/commands/start";
+import { greetingReply } from "../../src/adapters/telegram/replies";
 import worker, { WEBHOOK_PATH } from "../../src/worker";
 import sendMessageOk from "../fixtures/telegram-send-message-ok.json";
 import startUpdate from "../fixtures/telegram-start-update.json";
@@ -42,7 +42,7 @@ describe("worker skeleton", () => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     expect(url).toContain("/sendMessage");
     const body = JSON.parse(typeof init?.body === "string" ? init.body : "{}") as { chat_id: number; text: string };
-    expect(body).toMatchObject({ chat_id: 4242, text: START_MESSAGE });
+    expect(body).toMatchObject({ chat_id: 4242, text: greetingReply(undefined) });
   });
 
   it("rejects an update with the wrong secret token", async () => {

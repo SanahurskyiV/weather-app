@@ -1,9 +1,12 @@
-import type { Bot } from "grammy";
+import type { GetHomeCity } from "../../../app/get-home-city";
+import type { PrivateComposer } from "../context";
+import { greetingReply } from "../replies";
 
-export const START_MESSAGE =
-  "Hi! I'm a weather bot. Soon you'll be able to pick a city, ask for the current weather, " +
-  "and get heads-up alerts about rain or sharp temperature changes.";
-
-export function registerStart(bot: Bot): void {
-  bot.command("start", (ctx) => ctx.reply(START_MESSAGE));
+/** /start: how to set a city and ask for the weather, naming the Home city when set (AC-11). */
+export function registerStart(composer: PrivateComposer, getHomeCity: GetHomeCity): void {
+  composer.command("start", async (ctx) => {
+    const homeCity = await getHomeCity(ctx.chat.id);
+    ctx.event.outcome = "ok";
+    await ctx.reply(greetingReply(homeCity));
+  });
 }

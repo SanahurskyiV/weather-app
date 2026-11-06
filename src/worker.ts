@@ -1,7 +1,10 @@
 import { webhookCallback } from "grammy";
 import type { UserFromGetMe } from "grammy/types";
+import { systemClock } from "./adapters/clock/system-clock";
+import { makeD1HomeCityRepo } from "./adapters/d1/home-city-repo";
 import { log } from "./adapters/log";
 import { createBot } from "./adapters/telegram/bot";
+import { makeGetHomeCity } from "./app/get-home-city";
 
 // Composition root: builds adapters from env and hands them to use cases (ADR-0002).
 
@@ -22,7 +25,10 @@ export default {
       return new Response("Not found", { status: 404 });
     }
 
-    const bot = createBot(env.BOT_TOKEN, parseBotInfo(env.BOT_INFO));
+    const bot = createBot(env.BOT_TOKEN, parseBotInfo(env.BOT_INFO), {
+      clock: systemClock,
+      getHomeCity: makeGetHomeCity(makeD1HomeCityRepo(env.DB)),
+    });
     const handleUpdate = webhookCallback(bot, "cloudflare-mod", { secretToken: env.WEBHOOK_SECRET });
     try {
       return await handleUpdate(request);
