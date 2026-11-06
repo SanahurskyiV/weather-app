@@ -5,6 +5,7 @@ type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 function candidate(overrides: Partial<PlaceCandidate> = {}): PlaceCandidate {
   return {
+    id: 2988507,
     name: "Paris",
     region: "Île-de-France",
     country: "France",
@@ -32,6 +33,7 @@ const parisTx = candidate({
   timezone: "America/Chicago",
   featureCode: "PPLA2",
   population: 24_171,
+  id: 4717560,
 });
 
 describe("isPopulatedPlace", () => {
@@ -59,6 +61,7 @@ describe("pickBestMatch", () => {
     const region = candidate({ featureCode: "ADM1", population: 12_000_000 });
     const best = pickBestMatch([parisTx, region, parisFr]);
     expect(best?.place.country).toBe("France");
+    expect(best?.placeId).toBe(2988507);
     expect(best?.ambiguous).toBe(true);
   });
 

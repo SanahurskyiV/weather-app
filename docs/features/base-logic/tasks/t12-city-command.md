@@ -2,7 +2,7 @@
 id: T12
 title: "Add the /city command and its replies"
 layer: "ports"
-deps: ["T7", "T10", "T11"]
+deps: ["T7", "T10", "T11", "T16"]
 blocks: ["T14"]
 acs: ["AC-01", "AC-03", "AC-04", "AC-04b", "AC-05", "AC-06", "AC-07", "AC-16", "AC-17"]
 files_hint: ["src/adapters/telegram/commands/city.ts", "src/adapters/telegram/bot.ts", "src/adapters/telegram/replies.ts", "src/worker.ts", "test/integration/city.test.ts"]

@@ -33,7 +33,10 @@ export interface UsageCounter {
 
 /** Place candidates for a name, optionally limited to one country. */
 export interface PlaceLookup {
-  find(query: CityQuery): Promise<Result<PlaceCandidate[], "unavailable">>;
+  /** Searches names in `language` ("en", or the query's script language for a non-Latin name). */
+  find(query: CityQuery, language: string): Promise<Result<PlaceCandidate[], "unavailable">>;
+  /** The place with this id, with English names. */
+  findById(id: number): Promise<Result<Place, "unavailable">>;
 }
 
 /** Current conditions at a location. */

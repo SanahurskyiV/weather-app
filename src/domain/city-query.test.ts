@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_QUERY_LENGTH, parseCityQuery } from "./city-query";
+import { MAX_QUERY_LENGTH, parseCityQuery, searchLanguage } from "./city-query";
 import { err, ok } from "./result";
 
 // "é" written as "e" + combining acute accent: one visible character, two UTF-16 units.
@@ -63,5 +63,33 @@ describe("parseCityQuery", () => {
 
   it("measures the trimmed text", () => {
     expect(parseCityQuery(`  ${"a".repeat(100)}  `)).toEqual(ok({ name: "a".repeat(100) }));
+  });
+});
+
+describe("searchLanguage", () => {
+  it.each(["Kyiv", "Paris", "São Paulo", "Zürich", "Łódź", "Washington, D.C.", "1st Street", ""])(
+    "searches %j in English",
+    (name) => {
+      expect(searchLanguage(name)).toBe("en");
+    },
+  );
+
+  it.each([
+    ["Київ", "uk"],
+    ["Львів", "uk"],
+    ["Kyiv Київ", "uk"],
+    ["Αθήνα", "el"],
+    ["القاهرة", "ar"],
+    ["תל אביב", "he"],
+    ["თბილისი", "ka"],
+    ["東京", "zh"],
+    ["とうきょう", "ja"],
+    ["서울", "ko"],
+  ])("searches %j in its script's language %s (AC-01)", (name, language) => {
+    expect(searchLanguage(name)).toBe(language);
+  });
+
+  it("falls back to English for a script without a mapped language", () => {
+    expect(searchLanguage("ᚠᚢᚦ")).toBe("en");
   });
 });

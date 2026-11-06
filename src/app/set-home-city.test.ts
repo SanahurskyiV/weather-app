@@ -18,6 +18,7 @@ const kyiv: Place = {
 };
 const lviv: Place = { ...kyiv, name: "Lviv", region: "Lviv Oblast", latitude: 49.84, longitude: 24.03 };
 const parisFr: PlaceCandidate = {
+  id: 2988507,
   name: "Paris",
   region: "Île-de-France",
   country: "France",
@@ -34,6 +35,16 @@ const parisTx: PlaceCandidate = {
   timezone: "America/Chicago",
   featureCode: "PPLA2",
   population: 24_171,
+  id: 4717560,
+};
+const kyivUk: PlaceCandidate = {
+  ...kyiv,
+  id: 703448,
+  name: "Київ",
+  region: "Місто Київ",
+  country: "Україна",
+  featureCode: "PPLC",
+  population: 2_952_301,
 };
 const ileDeFrance: PlaceCandidate = { ...parisFr, name: "Île-de-France", featureCode: "ADM1", population: 12_000_000 };
 
@@ -42,11 +53,15 @@ interface Setup {
   daily?: number;
   chatLastHour?: number;
   found?: Result<PlaceCandidate[], "unavailable">;
+  byId?: Result<Place, "unavailable">;
 }
 
-function setup({ current, daily = 0, chatLastHour = 0, found = ok([parisFr]) }: Setup = {}) {
+function setup({ current, daily = 0, chatLastHour = 0, found = ok([parisFr]), byId = ok(kyiv) }: Setup = {}) {
   const calls: string[] = [];
   const queries: CityQuery[] = [];
+  const languages: string[] = [];
+  const ids: number[] = [];
+  let lookups = 0;
   const saved: { chatId: number; place: Place; at: Date }[] = [];
   const reserved: { chatId: number; now: Date }[] = [];
   let nowCalls = 0;
@@ -65,7 +80,8 @@ function setup({ current, daily = 0, chatLastHour = 0, found = ok([parisFr]) }: 
   const counter: UsageCounter = {
     counts() {
       calls.push("counter.counts");
-      return Promise.resolve({ daily, chatLastHour });
+      // Reservations made earlier in the same request count, like the real counter.
+      return Promise.resolve({ daily: daily + reserved.length, chatLastHour: chatLastHour + reserved.length });
     },
     reserve(chatId, now) {
       calls.push("counter.reserve");
@@ -74,10 +90,16 @@ function setup({ current, daily = 0, chatLastHour = 0, found = ok([parisFr]) }: 
     },
   };
   const lookup: PlaceLookup = {
-    find(query) {
+    find(query, language) {
       calls.push("lookup.find");
       queries.push(query);
+      languages.push(language);
       return Promise.resolve(found);
+    },
+    findById(id) {
+      calls.push("lookup.findById");
+      ids.push(id);
+      return Promise.resolve(byId);
     },
   };
   const clock: Clock = {
@@ -87,8 +109,22 @@ function setup({ current, daily = 0, chatLastHour = 0, found = ok([parisFr]) }: 
     },
   };
 
-  const setHomeCity = makeSetHomeCity({ repo, counter, lookup, clock });
-  return { setHomeCity, calls, queries, saved, reserved, nowCalls: () => nowCalls };
+  const run = makeSetHomeCity({ repo, counter, lookup, clock });
+  const setHomeCity = (chatId: number, text: string) =>
+    run(chatId, text, () => {
+      lookups++;
+    });
+  return {
+    setHomeCity,
+    calls,
+    queries,
+    languages,
+    ids,
+    saved,
+    reserved,
+    nowCalls: () => nowCalls,
+    lookups: () => lookups,
+  };
 }
 
 describe("setHomeCity", () => {
@@ -112,7 +148,7 @@ describe("setHomeCity", () => {
   });
 
   it("replaces the current Home city (AC-02)", async () => {
-    const t = setup({ current: kyiv, found: ok([{ ...lviv, featureCode: "PPLA", population: 717_000 }]) });
+    const t = setup({ current: kyiv, found: ok([{ ...lviv, id: 702550, featureCode: "PPLA", population: 717_000 }]) });
 
     const result = await t.setHomeCity(CHAT, "Lviv");
 
@@ -197,5 +233,79 @@ describe("setHomeCity", () => {
     expect(t.nowCalls()).toBe(1);
     expect(t.reserved[0]?.now).toBe(NOW);
     expect(t.saved[0]?.at).toBe(NOW);
+  });
+  it("searches a Latin name once, in English, and reports one lookup", async () => {
+    const t = setup();
+
+    await t.setHomeCity(CHAT, "Paris");
+
+    expect(t.languages).toEqual(["en"]);
+    expect(t.calls).not.toContain("lookup.findById");
+    expect(t.lookups()).toBe(1);
+  });
+
+  it("reports no lookups for a refused query", async () => {
+    const t = setup();
+
+    await t.setHomeCity(CHAT, "   ");
+
+    expect(t.lookups()).toBe(0);
+  });
+
+  it("resolves a non-Latin name with a localized search, then an English re-fetch by id (AC-01)", async () => {
+    const t = setup({ found: ok([kyivUk]), byId: ok(kyiv) });
+
+    const result = await t.setHomeCity(CHAT, "Київ");
+
+    expect(result).toEqual(ok({ place: kyiv, ambiguous: false }));
+    expect(t.queries).toEqual([{ name: "Київ" }]);
+    expect(t.languages).toEqual(["uk"]);
+    expect(t.ids).toEqual([703448]);
+    expect(t.saved.map((s) => s.place)).toEqual([kyiv]);
+    expect(t.calls).toEqual([
+      `repo.get(${String(CHAT)})`,
+      "counter.counts",
+      "counter.reserve",
+      "lookup.find",
+      "counter.counts",
+      "counter.reserve",
+      "lookup.findById",
+      "repo.save",
+    ]);
+    expect(t.lookups()).toBe(2);
+  });
+
+  it("skips the re-fetch when the localized search finds no populated place (AC-05)", async () => {
+    const t = setup({ current: lviv, found: ok([]) });
+
+    expect(await t.setHomeCity(CHAT, "Київ")).toEqual(err({ kind: "not_found", current: lviv }));
+    expect(t.calls).not.toContain("lookup.findById");
+    expect(t.lookups()).toBe(1);
+  });
+
+  it("reports a failed re-fetch as unavailable, counts both calls and saves nothing (AC-04b, AC-17)", async () => {
+    const t = setup({ current: lviv, found: ok([kyivUk]), byId: err("unavailable") });
+
+    expect(await t.setHomeCity(CHAT, "Київ")).toEqual(err({ kind: "unavailable", current: lviv }));
+    expect(t.reserved).toHaveLength(2);
+    expect(t.saved).toEqual([]);
+    expect(t.lookups()).toBe(2);
+  });
+
+  it("refuses the re-fetch when the first call used the chat's last lookup (AC-16)", async () => {
+    const t = setup({ current: lviv, chatLastHour: 29, found: ok([kyivUk]) });
+
+    expect(await t.setHomeCity(CHAT, "Київ")).toEqual(err({ kind: "user_limit" }));
+    expect(t.reserved).toHaveLength(1);
+    expect(t.calls).not.toContain("lookup.findById");
+    expect(t.saved).toEqual([]);
+    expect(t.lookups()).toBe(1);
+  });
+
+  it("refuses the re-fetch when the first call used the bot's last daily lookup (AC-17)", async () => {
+    const t = setup({ daily: 4999, found: ok([kyivUk]) });
+
+    expect(await t.setHomeCity(CHAT, "Київ")).toEqual(err({ kind: "daily_limit" }));
+    expect(t.calls).not.toContain("lookup.findById");
   });
 });

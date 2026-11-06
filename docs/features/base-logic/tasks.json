@@ -244,7 +244,8 @@
       "deps": [
         "T7",
         "T10",
-        "T11"
+        "T11",
+        "T16"
       ],
       "acs": [
         "AC-01",
@@ -328,6 +329,36 @@
       ],
       "file": "docs/features/base-logic/tasks/t15-readme.md",
       "status": "todo"
+    },
+    {
+      "id": "T16",
+      "title": "Resolve non-Latin set-city queries with a localized search and an English re-fetch",
+      "layer": "app",
+      "deps": [
+        "T7",
+        "T10"
+      ],
+      "acs": [
+        "AC-01",
+        "AC-16",
+        "AC-17"
+      ],
+      "dod": "Unit + contract tests show: a Latin query makes one language=en search; a non-Latin query searches in its script language (Cyrillic → uk), then re-fetches the picked place by id in English; each call is limit-checked and reserved; the reply name is English; the lookup count reaches the handler.",
+      "files_hint": [
+        "src/domain/city-query.ts",
+        "src/domain/city-query.test.ts",
+        "src/domain/place.ts",
+        "src/domain/place.test.ts",
+        "src/app/ports.ts",
+        "src/app/set-home-city.ts",
+        "src/app/set-home-city.test.ts",
+        "src/adapters/open-meteo/geocoding.ts",
+        "src/adapters/open-meteo/geocoding.test.ts",
+        "test/fixtures/open-meteo-geocoding-kyiv-uk.json",
+        "test/fixtures/open-meteo-get-kyiv.json"
+      ],
+      "file": "docs/features/base-logic/tasks/t16-non-latin-city-names.md",
+      "status": "done"
     }
   ]
 }

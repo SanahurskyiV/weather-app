@@ -12,6 +12,8 @@ export interface Place {
 
 /** One geocoding result, before the best match is picked. */
 export interface PlaceCandidate extends Place {
+  /** The source's place id, used to re-fetch the place with English names. */
+  readonly id: number;
   /** GeoNames feature code: "PPLC" for a capital, "ADM1" for a region, "PCLI" for a country. */
   readonly featureCode: string;
   readonly population?: number;
@@ -19,6 +21,7 @@ export interface PlaceCandidate extends Place {
 
 export interface BestMatch {
   readonly place: Place;
+  readonly placeId: number;
   /** More than one populated place matched, so the reply hints at adding a country (AC-06). */
   readonly ambiguous: boolean;
 }
@@ -36,7 +39,7 @@ export function pickBestMatch(candidates: readonly PlaceCandidate[]): BestMatch 
     if (!best || (candidate.population ?? -1) > (best.population ?? -1)) best = candidate;
   }
   if (!best) return undefined;
-  return { place: toPlace(best), ambiguous: populated.length > 1 };
+  return { place: toPlace(best), placeId: best.id, ambiguous: populated.length > 1 };
 }
 
 /** "Kyiv, Kyiv City, Ukraine", or "Monaco, Monaco" when there is no region (AC-01). */
@@ -44,6 +47,6 @@ export function formatPlaceName(place: Place): string {
   return [place.name, place.region, place.country].filter((part) => part !== undefined).join(", ");
 }
 
-function toPlace({ name, region, country, latitude, longitude, timezone }: PlaceCandidate): Place {
+export function toPlace({ name, region, country, latitude, longitude, timezone }: PlaceCandidate): Place {
   return { name, ...(region === undefined ? {} : { region }), country, latitude, longitude, timezone };
 }

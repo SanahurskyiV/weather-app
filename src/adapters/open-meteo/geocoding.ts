@@ -1,16 +1,18 @@
 import type { PlaceLookup } from "../../app/ports";
-import type { PlaceCandidate } from "../../domain/place";
+import { type PlaceCandidate, toPlace } from "../../domain/place";
 import { err, ok } from "../../domain/result";
 import { fetchJson, isFiniteNumber, isRecord } from "./http";
 
 const SEARCH_URL = "https://geocoding-api.open-meteo.com/v1/search";
+const GET_URL = "https://geocoding-api.open-meteo.com/v1/get";
 const MAX_CANDIDATES = 10;
 
-/** Maps one `results[]` entry; `undefined` when a required field is missing or mistyped. */
+/** Maps one place entry; `undefined` when a required field is missing or mistyped. */
 function toCandidate(entry: unknown): PlaceCandidate | undefined {
   if (!isRecord(entry)) return undefined;
-  const { name, admin1, country, latitude, longitude, timezone, feature_code, population } = entry;
+  const { id, name, admin1, country, latitude, longitude, timezone, feature_code, population } = entry;
   if (
+    !isFiniteNumber(id) ||
     typeof name !== "string" ||
     typeof country !== "string" ||
     typeof timezone !== "string" ||
@@ -21,6 +23,7 @@ function toCandidate(entry: unknown): PlaceCandidate | undefined {
     return undefined;
   }
   return {
+    id,
     name,
     ...(typeof admin1 === "string" ? { region: admin1 } : {}),
     country,
@@ -32,14 +35,14 @@ function toCandidate(entry: unknown): PlaceCandidate | undefined {
   };
 }
 
-/** PlaceLookup over Open-Meteo Geocoding: top 10 candidates with English names (SAD §5). */
+/** PlaceLookup over Open-Meteo Geocoding: top 10 candidates in the requested language (SAD §5, T16). */
 export function makeOpenMeteoGeocoding(): PlaceLookup {
   return {
-    async find({ name, countryCode }) {
+    async find({ name, countryCode }, language) {
       const url = new URL(SEARCH_URL);
       url.searchParams.set("name", name);
       url.searchParams.set("count", String(MAX_CANDIDATES));
-      url.searchParams.set("language", "en");
+      url.searchParams.set("language", language);
       url.searchParams.set("format", "json");
       if (countryCode !== undefined) url.searchParams.set("countryCode", countryCode);
 
@@ -56,6 +59,16 @@ export function makeOpenMeteoGeocoding(): PlaceLookup {
         candidates.push(candidate);
       }
       return ok(candidates);
+    },
+
+    async findById(id) {
+      const url = new URL(GET_URL);
+      url.searchParams.set("id", String(id));
+      url.searchParams.set("language", "en");
+
+      const body = await fetchJson(url);
+      const candidate = body.ok ? toCandidate(body.value) : undefined;
+      return candidate ? ok(toPlace(candidate)) : err("unavailable");
     },
   };
 }

@@ -38,3 +38,28 @@ export function parseCityQuery(text: string): Result<CityQuery, CityQueryError> 
   const countryCode = resolveCountry(countryText);
   return countryCode ? ok({ name, countryCode }) : err("unknown_country");
 }
+
+// Script → language for the place search. The source matches names only in the requested language,
+// so "Київ" must be searched in Ukrainian and then re-fetched in English (T16, AC-01).
+const SCRIPT_LANGUAGES: readonly (readonly [RegExp, string])[] = [
+  [/\p{Script=Cyrillic}/u, "uk"],
+  [/\p{Script=Greek}/u, "el"],
+  [/\p{Script=Arabic}/u, "ar"],
+  [/\p{Script=Hebrew}/u, "he"],
+  [/\p{Script=Georgian}/u, "ka"],
+  [/\p{Script=Armenian}/u, "hy"],
+  [/[\p{Script=Hiragana}\p{Script=Katakana}]/u, "ja"],
+  [/\p{Script=Hangul}/u, "ko"],
+  [/\p{Script=Han}/u, "zh"],
+  [/\p{Script=Thai}/u, "th"],
+  [/\p{Script=Devanagari}/u, "hi"],
+];
+
+const NON_LATIN_LETTER = /(?!\p{Script=Latin})\p{L}/u;
+
+/** "en" for a name written in Latin letters; otherwise the language of its first non-Latin letter's script. */
+export function searchLanguage(name: string): string {
+  const letter = NON_LATIN_LETTER.exec(name)?.[0];
+  if (letter === undefined) return "en";
+  return SCRIPT_LANGUAGES.find(([script]) => script.test(letter))?.[1] ?? "en";
+}
