@@ -88,7 +88,7 @@
         "src/domain/weather.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t05-describe-weather.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T6",

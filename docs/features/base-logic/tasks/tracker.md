@@ -12,7 +12,7 @@
 | T2 | [Parse the city query and recognise countries](./t02-parse-city-query.md) | domain | Vlad S | M | — | done | COMMIT |
 | T3 | [Pick the best-matching populated place and format its name](./t03-pick-best-place.md) | domain | Vlad S | S | — | done | COMMIT |
 | T4 | [Encode the lookup limits and UTC counting keys](./t04-usage-limits.md) | domain | Vlad S | S | — | done | COMMIT |
-| T5 | [Describe and round the current weather reading](./t05-describe-weather.md) | domain | Vlad S | S | — | todo | — |
+| T5 | [Describe and round the current weather reading](./t05-describe-weather.md) | domain | Vlad S | S | — | done | COMMIT |
 | T6 | [Declare the four new ports and the get-home-city use case](./t06-ports-and-get-home-city.md) | app | Vlad S | S | T3, T5 | todo | — |
 | T7 | [Implement the set-home-city use case](./t07-set-home-city-use-case.md) | app | Vlad S | M | T2, T3, T4, T6 | todo | — |
 | T8 | [Implement the get-current-weather use case](./t08-get-current-weather-use-case.md) | app | Vlad S | S | T4, T5, T6 | todo | — |

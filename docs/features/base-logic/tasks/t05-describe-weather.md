@@ -9,8 +9,8 @@ files_hint: ["src/domain/weather.ts", "src/domain/weather.test.ts"]
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T5 — Describe and round the current weather reading
 
