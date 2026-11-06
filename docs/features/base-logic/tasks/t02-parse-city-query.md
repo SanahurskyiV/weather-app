@@ -9,8 +9,8 @@ files_hint: ["src/domain/city-query.ts", "src/domain/city-query.test.ts", "src/d
 owner: "Vlad S"
 estimate: "M"
 context_budget: "M"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T2 — Parse the city query and recognise countries
 

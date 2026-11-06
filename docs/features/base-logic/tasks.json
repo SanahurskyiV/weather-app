@@ -38,7 +38,7 @@
         "src/domain/countries.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t02-parse-city-query.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T3",
