@@ -9,8 +9,8 @@ files_hint: ["src/adapters/telegram/replies.ts", "test/integration/telegram-edge
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: "—"
+status: "done"
+step: "COMMIT"
 ---
 # T23 — Use the real command in the help reply and assert nothing is stored where the plan says so
 

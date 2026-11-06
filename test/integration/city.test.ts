@@ -223,6 +223,7 @@ describe("/city", () => {
     await send(privateText("/city Paris"));
 
     expect(out.replies.map((r) => r.text)).toEqual([UNAVAILABLE_REPLY]);
+    expect(await homeCity(CHAT_A)).toBeNull();
   }, 5000);
 
   it("stores the most populous Paris and hints at adding a country (AC-06)", async () => {
@@ -322,6 +323,7 @@ describe("/city", () => {
   });
 
   it("answers 'daily limit' when the bot-wide budget is used up, even when the chat is also capped (AC-17)", async () => {
+    await seedHomeCity(env.DB, { chat_id: CHAT_A });
     await seedDailyCount(env.DB, new Date().toISOString().slice(0, 10), 5000);
     await seedLookups(env.DB, CHAT_A, timesBefore(new Date(), 30, 5));
     const out = stubOutbound(geocoder(ANSWERS));
@@ -334,6 +336,7 @@ describe("/city", () => {
     expect(DAILY_LIMIT_REPLY.toLowerCase()).toContain("tomorrow");
     expect(out.lookups).toEqual([]);
     expect(logs.updates()).toEqual([expect.objectContaining({ outcome: "daily_limit", lookups: 0 })]);
+    expect(await homeCity(CHAT_A)).toMatchObject({ name: "Kyiv" });
   });
 
   it("builds the success reply from the resolved place", () => {

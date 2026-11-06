@@ -93,14 +93,15 @@ describe("webhook intake (flow A)", () => {
     ]);
   });
 
-  it("logs an edited message once, marked as an edit, and does not reply (AC-12)", async () => {
+  it("logs an edited message once, marked as an edit, and does not reply or store anything (AC-12)", async () => {
     const out = stubOutbound();
     const logs = captureLogs();
 
-    const response = await send(editedPrivateText("/start"));
+    const response = await send(editedPrivateText("/city Kyiv"));
 
     expect(response.status).toBe(200);
-    expect(out.replies).toEqual([]);
+    expect(out.calls).toEqual([]);
+    expect(await homeCityRows()).toBe(0);
     expect(logs.updates()).toEqual([expect.objectContaining({ is_edit: true, outcome: "ignored", replied: false })]);
   });
 });
@@ -180,9 +181,9 @@ describe("not understood (AC-12)", () => {
     expect(logs.updates()).toEqual([expect.objectContaining({ outcome: "not_understood", replied: true, lookups: 0 })]);
   });
 
-  it("lists the set-city command followed by the city name", () => {
-    expect(HELP_REPLY).toContain("/city");
-    expect(HELP_REPLY).toMatch(/followed by the city name/);
+  it("lists the set-city command by its real name, followed by the city name (AC-12, spec §1)", () => {
+    expect(HELP_REPLY).toContain("send /city followed by the city name");
+    expect(HELP_REPLY).not.toContain("set-city");
     expect(HELP_REPLY).toContain("/weather");
   });
 });

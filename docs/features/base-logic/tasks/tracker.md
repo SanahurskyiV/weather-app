@@ -30,6 +30,6 @@
 | T20 | [Drop forged updates silently and fail closed without a webhook secret](./t20-webhook-secret-fail-closed.md) | wiring | Vlad S | S | T14 | done | COMMIT |
 | T21 | [Keep the real outcome when the reply fails, name the fault, and prove no secret is logged](./t21-request-log-reply-failures.md) | ports | Vlad S | M | T11 | done | COMMIT |
 | T22 | [Let the get-current-weather use case report its lookups](./t22-weather-lookup-callback.md) | app | Vlad S | S | T8, T13 | done | COMMIT |
-| T23 | [Use the real command in the help reply and assert nothing is stored where the plan says so](./t23-help-wording-and-storage-asserts.md) | ports | Vlad S | S | T11, T12 | todo | — |
+| T23 | [Use the real command in the help reply and assert nothing is stored where the plan says so](./t23-help-wording-and-storage-asserts.md) | ports | Vlad S | S | T11, T12 | done | COMMIT |
 
 **Total:** 23 tasks (T17–T23 are review follow-ups), ~16 person-days (S ≈ ½ day, M ≈ 1 day).

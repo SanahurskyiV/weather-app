@@ -507,7 +507,7 @@
         "test/integration/city.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t23-help-wording-and-storage-asserts.md",
-      "status": "todo"
+      "status": "done"
     }
   ]
 }

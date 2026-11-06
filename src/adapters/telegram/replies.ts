@@ -16,7 +16,7 @@ export function greetingReply(homeCity: Place | undefined): string {
 
 export const HELP_REPLY = [
   "Here is what I understand:",
-  "/city Kyiv: send the set-city command followed by the city name. Add a country to pick another match, for example /city Paris, US",
+  "/city Kyiv: send /city followed by the city name. Add a country to pick another match, for example /city Paris, US",
   "/weather: the current weather in your city",
   "/start: how to get started",
 ].join("\n");
