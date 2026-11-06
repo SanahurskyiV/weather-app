@@ -294,7 +294,7 @@
         "test/integration/weather.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t13-weather-command.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T14",

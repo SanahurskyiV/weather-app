@@ -9,8 +9,8 @@ files_hint: ["src/adapters/telegram/commands/weather.ts", "src/adapters/telegram
 owner: "Vlad S"
 estimate: "M"
 context_budget: "M"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T13 — Add the /weather command and its replies
 

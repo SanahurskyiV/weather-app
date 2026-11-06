@@ -4,8 +4,10 @@ import { systemClock } from "./adapters/clock/system-clock";
 import { makeD1HomeCityRepo } from "./adapters/d1/home-city-repo";
 import { makeD1UsageCounter } from "./adapters/d1/usage-counter";
 import { log } from "./adapters/log";
+import { makeOpenMeteoForecast } from "./adapters/open-meteo/forecast";
 import { makeOpenMeteoGeocoding } from "./adapters/open-meteo/geocoding";
 import { createBot } from "./adapters/telegram/bot";
+import { makeGetCurrentWeather } from "./app/get-current-weather";
 import { makeGetHomeCity } from "./app/get-home-city";
 import { makeSetHomeCity } from "./app/set-home-city";
 
@@ -34,6 +36,7 @@ export default {
       clock: systemClock,
       getHomeCity: makeGetHomeCity(repo),
       setHomeCity: makeSetHomeCity({ repo, counter, lookup: makeOpenMeteoGeocoding(), clock: systemClock }),
+      getCurrentWeather: makeGetCurrentWeather({ repo, counter, weather: makeOpenMeteoForecast(), clock: systemClock }),
     });
     const handleUpdate = webhookCallback(bot, "cloudflare-mod", { secretToken: env.WEBHOOK_SECRET });
     try {

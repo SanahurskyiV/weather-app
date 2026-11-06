@@ -1,5 +1,7 @@
+import type { WeatherError } from "../../app/get-current-weather";
 import type { SetCityError } from "../../app/set-home-city";
 import { formatPlaceName, type Place } from "../../domain/place";
+import { type CurrentWeather, describeConditions, formatLocalTime, roundReading } from "../../domain/weather";
 
 // Every user-facing text. Plain text only: replies never set a parse mode (spec §6.1 text safety),
 // and any place name shown comes from the resolved place, never from the raw query.
@@ -72,6 +74,34 @@ export function setCityErrorReply(error: SetCityError): string {
       return notFoundReply(error.current);
     case "unavailable":
       return unavailableReply(error.current);
+    case "user_limit":
+      return USER_LIMIT_REPLY;
+    case "daily_limit":
+      return DAILY_LIMIT_REPLY;
+  }
+}
+
+// /weather (AC-08 to AC-10, AC-16, AC-17)
+
+/** "Weather in Kyiv, Kyiv City, Ukraine at 11:45 local time: overcast, 3 °C, feels like -1 °C, …" (AC-08). */
+export function weatherReply(place: Place, weather: CurrentWeather): string {
+  const w = roundReading(weather);
+  return [
+    `Weather in ${formatPlaceName(place)} at ${formatLocalTime(w.readingTime, place.timezone)} local time:`,
+    `${describeConditions(w.weatherCode)}, ${String(w.temperatureC)} °C, feels like ${String(w.feelsLikeC)} °C, ` +
+      `wind ${String(w.windKmh)} kilometres per hour, humidity ${String(w.humidityPct)}%`,
+  ].join("\n");
+}
+
+export const NO_HOME_CITY_REPLY =
+  "You haven't set a city yet. Send /city followed by the city name, for example /city Kyiv";
+
+export function weatherErrorReply(error: WeatherError): string {
+  switch (error.kind) {
+    case "no_home_city":
+      return NO_HOME_CITY_REPLY;
+    case "unavailable":
+      return UNAVAILABLE_REPLY;
     case "user_limit":
       return USER_LIMIT_REPLY;
     case "daily_limit":
