@@ -9,8 +9,8 @@ files_hint: ["src/app/get-current-weather.ts", "src/app/get-current-weather.test
 owner: "Vlad S"
 estimate: "S"
 context_budget: "M"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T8 — Implement the get-current-weather use case
 

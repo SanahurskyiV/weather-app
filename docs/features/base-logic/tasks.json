@@ -157,7 +157,7 @@
         "src/app/get-current-weather.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t08-get-current-weather-use-case.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T9",
