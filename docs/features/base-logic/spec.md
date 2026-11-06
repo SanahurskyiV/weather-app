@@ -362,7 +362,7 @@ Each error and authorization AC already has its own row above. These extra cases
 | Forged update: shared secret missing or wrong | forged update is dropped silently | e2e | no reply, nothing stored, no lookup and no log event |
 | City name carrying markup or control characters | city name text cannot break reply formatting | e2e | the reply is plain text and echoes only the place name the lookup resolved, never the raw query |
 | The same update delivered twice | redelivered update is detectable in the log | e2e | two log events carry the same update id (accepted risk, no de-duplication in v1) |
-| Outbound budget per message | every message stays within one lookup and one reply | e2e | each e2e scenario asserts at most one lookup and exactly one reply (or none where the AC says so), within the "≤ 3 outbound calls" NFR |
+| Outbound budget per message | every message stays within two lookups and one reply | e2e | each e2e scenario asserts at most one lookup (two for a non-Latin set-city, ADR-0003) and exactly one reply (or none where the AC says so), within the "≤ 3 outbound calls" NFR |
 | Bot identity not configured | missing bot identity logs a startup warning and the bot still answers | e2e | a warning event is logged once and a start greeting is still sent |
 
 ### Test data

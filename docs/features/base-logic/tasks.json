@@ -379,7 +379,7 @@
         "docs/features/base-logic/spec.md"
       ],
       "file": "docs/features/base-logic/tasks/t17-adr-non-latin-lookups.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T18",

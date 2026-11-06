@@ -24,7 +24,7 @@
 | T14 | [Build the bot once per isolate and verify the per-message budgets end to end](./t14-composition-root.md) | wiring | Vlad S | M | T12, T13 | done | COMMIT |
 | T15 | [Update the README for the new commands and the BOT_INFO deploy step](./t15-readme.md) | docs | Vlad S | S | — | done | COMMIT |
 | T16 | [Resolve non-Latin set-city queries with a localized search and an English re-fetch](./t16-non-latin-city-names.md) | app | Vlad S | S | T7, T10 | done | COMMIT |
-| T17 | [Record the two-lookup non-Latin set-city decision in ADR-0003 and the design docs](./t17-adr-non-latin-lookups.md) | docs | Vlad S | S | T16 | todo | — |
+| T17 | [Record the two-lookup non-Latin set-city decision in ADR-0003 and the design docs](./t17-adr-non-latin-lookups.md) | docs | Vlad S | S | T16 | done | COMMIT |
 | T18 | [Pin the 1.5 s cutoff and tolerate malformed geocoder entries and unknown timezones](./t18-harden-open-meteo-adapters.md) | infra | Vlad S | S | T10, T16 | todo | — |
 | T19 | [Name the current Home city on every "couldn't find that place" reply](./t19-still-city-on-every-not-found.md) | app | Vlad S | S | T7, T12 | todo | — |
 | T20 | [Drop forged updates silently and fail closed without a webhook secret](./t20-webhook-secret-fail-closed.md) | wiring | Vlad S | S | T14 | todo | — |

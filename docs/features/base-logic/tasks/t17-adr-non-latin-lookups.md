@@ -9,8 +9,8 @@ files_hint: ["docs/features/base-logic/adr/0003-resolve-non-latin-names-with-a-l
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: "—"
+status: "done"
+step: "COMMIT"
 ---
 # T17 — Record the two-lookup non-Latin set-city decision in ADR-0003 and the design docs
 
