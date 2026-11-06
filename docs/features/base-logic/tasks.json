@@ -1,0 +1,333 @@
+{
+  "slug": "base-logic",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Promote the three staged base-logic migrations",
+      "layer": "migration",
+      "deps": [],
+      "acs": [
+        "AC-02",
+        "AC-14"
+      ],
+      "dod": "The three staged migrations are promoted to migrations/0002–0004 (next free numbers) and applied by the test harness; an integration test proves the tables, the index and one-row-per-chat upsert.",
+      "files_hint": [
+        "docs/features/base-logic/migrations/01_create_home_cities.sql",
+        "docs/features/base-logic/migrations/02_create_lookups.sql",
+        "docs/features/base-logic/migrations/03_create_daily_lookup_counts.sql",
+        "test/integration/schema.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t01-promote-migrations.md",
+      "status": "todo"
+    },
+    {
+      "id": "T2",
+      "title": "Parse the city query and recognise countries",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-03",
+        "AC-04",
+        "AC-07"
+      ],
+      "dod": "Table-driven unit tests show parseCityQuery returns blank / too_long / unknown_country / {name, countryCode?} for every edge row, and countries.ts resolves codes, names and the USA/UK aliases.",
+      "files_hint": [
+        "src/domain/city-query.ts",
+        "src/domain/city-query.test.ts",
+        "src/domain/countries.ts",
+        "src/domain/countries.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t02-parse-city-query.md",
+      "status": "todo"
+    },
+    {
+      "id": "T3",
+      "title": "Pick the best-matching populated place and format its name",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-01",
+        "AC-06"
+      ],
+      "dod": "Unit tests show pickBestMatch keeps only populated places, picks the highest population (ties and missing population → source order), flags ambiguity, and formatPlaceName drops a missing region.",
+      "files_hint": [
+        "src/domain/place.ts",
+        "src/domain/place.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t03-pick-best-place.md",
+      "status": "todo"
+    },
+    {
+      "id": "T4",
+      "title": "Encode the lookup limits and UTC counting keys",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-16",
+        "AC-17"
+      ],
+      "dod": "Unit tests at the boundaries (4,999/5,000 daily; 29/30 per chat; both hit → daily_limit) and for the UTC day key and the 60-minute window start pass.",
+      "files_hint": [
+        "src/domain/usage-limits.ts",
+        "src/domain/usage-limits.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t04-usage-limits.md",
+      "status": "todo"
+    },
+    {
+      "id": "T5",
+      "title": "Describe and round the current weather reading",
+      "layer": "domain",
+      "deps": [],
+      "acs": [
+        "AC-08"
+      ],
+      "dod": "Unit tests show WMO codes map to words with an \"unknown conditions\" fallback, all four numbers round to whole numbers (no \"-0\"), and the reading time renders in the Home city's timezone.",
+      "files_hint": [
+        "src/domain/weather.ts",
+        "src/domain/weather.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t05-describe-weather.md",
+      "status": "todo"
+    },
+    {
+      "id": "T6",
+      "title": "Declare the four new ports and the get-home-city use case",
+      "layer": "app",
+      "deps": [
+        "T3",
+        "T5"
+      ],
+      "acs": [
+        "AC-11"
+      ],
+      "dod": "ports.ts declares PlaceLookup, WeatherProvider, HomeCityRepo and UsageCounter over domain types; a unit test with a fake repo shows getHomeCity returns the chat's Place or none.",
+      "files_hint": [
+        "src/app/ports.ts",
+        "src/app/get-home-city.ts",
+        "src/app/get-home-city.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t06-ports-and-get-home-city.md",
+      "status": "todo"
+    },
+    {
+      "id": "T7",
+      "title": "Implement the set-home-city use case",
+      "layer": "app",
+      "deps": [
+        "T2",
+        "T3",
+        "T4",
+        "T6"
+      ],
+      "acs": [
+        "AC-02",
+        "AC-04",
+        "AC-04b",
+        "AC-05",
+        "AC-16",
+        "AC-17"
+      ],
+      "dod": "Unit tests with fake ports show: parse errors and both limits make no reserve and no lookup; an allowed request reserves exactly once before the lookup; only a found place is saved; not_found/unavailable carry the current Home city.",
+      "files_hint": [
+        "src/app/set-home-city.ts",
+        "src/app/set-home-city.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t07-set-home-city-use-case.md",
+      "status": "todo"
+    },
+    {
+      "id": "T8",
+      "title": "Implement the get-current-weather use case",
+      "layer": "app",
+      "deps": [
+        "T4",
+        "T5",
+        "T6"
+      ],
+      "acs": [
+        "AC-09",
+        "AC-10",
+        "AC-16",
+        "AC-17"
+      ],
+      "dod": "Unit tests with fake ports show: no Home city → no_home_city with no counting; a limit hit → no reserve, no fetch; an allowed request reserves once then fetches at the stored coordinates; a provider failure → unavailable.",
+      "files_hint": [
+        "src/app/get-current-weather.ts",
+        "src/app/get-current-weather.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t08-get-current-weather-use-case.md",
+      "status": "todo"
+    },
+    {
+      "id": "T9",
+      "title": "Implement the D1 HomeCityRepo and UsageCounter adapters",
+      "layer": "infra",
+      "deps": [
+        "T1",
+        "T6"
+      ],
+      "acs": [
+        "AC-02",
+        "AC-14",
+        "AC-16",
+        "AC-17"
+      ],
+      "dod": "Integration tests on the local D1 show: save replaces per chat and never touches another chat; region NULL round-trips as undefined; counts honour the strict 60-minute window and a missing day row reads 0; reserve increments, inserts and prunes in one batch.",
+      "files_hint": [
+        "src/adapters/d1/home-city-repo.ts",
+        "src/adapters/d1/usage-counter.ts",
+        "test/integration/d1-adapters.test.ts",
+        "test/integration/db-fixtures.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t09-d1-adapters.md",
+      "status": "todo"
+    },
+    {
+      "id": "T10",
+      "title": "Implement the Open-Meteo geocoding and forecast adapters",
+      "layer": "infra",
+      "deps": [
+        "T6"
+      ],
+      "acs": [
+        "AC-04b",
+        "AC-06",
+        "AC-10"
+      ],
+      "dod": "Unit tests with a stubbed fetch and recorded fixtures show: geocoding maps results to PlaceCandidates (English names, feature code, population, optional region) and passes the country filter; forecast maps current fields to CurrentWeather; timeout, network error, non-OK or malformed JSON → unavailable.",
+      "files_hint": [
+        "src/adapters/open-meteo/geocoding.ts",
+        "src/adapters/open-meteo/geocoding.test.ts",
+        "src/adapters/open-meteo/forecast.ts",
+        "src/adapters/open-meteo/forecast.test.ts",
+        "test/fixtures/open-meteo-geocoding-paris.json",
+        "test/fixtures/open-meteo-geocoding-empty.json",
+        "test/fixtures/open-meteo-forecast-kyiv.json"
+      ],
+      "file": "docs/features/base-logic/tasks/t10-open-meteo-adapters.md",
+      "status": "todo"
+    },
+    {
+      "id": "T11",
+      "title": "Build the Telegram edge: request-log middleware, chat-type split, start, help and group replies",
+      "layer": "ports",
+      "deps": [
+        "T6",
+        "T9"
+      ],
+      "acs": [
+        "AC-11",
+        "AC-12",
+        "AC-13",
+        "AC-15"
+      ],
+      "dod": "Integration tests through the webhook show: every accepted update writes exactly one `update` log event (including a thrown handler, which still gets the fault reply and a 200); edits get no reply; the bot's own command in a group gets the private-chat pointer while other group traffic and channel posts get nothing; /start names the Home city when set; anything else gets the help list.",
+      "files_hint": [
+        "src/adapters/telegram/request-log.ts",
+        "src/adapters/telegram/bot.ts",
+        "src/adapters/telegram/replies.ts",
+        "src/adapters/telegram/commands/start.ts",
+        "src/adapters/telegram/commands/help.ts",
+        "src/adapters/telegram/commands/group.ts",
+        "src/worker.ts",
+        "test/integration/telegram-edge.test.ts",
+        "test/fixtures/telegram-group-command-update.json"
+      ],
+      "file": "docs/features/base-logic/tasks/t11-telegram-edge.md",
+      "status": "todo"
+    },
+    {
+      "id": "T12",
+      "title": "Add the /city command and its replies",
+      "layer": "ports",
+      "deps": [
+        "T7",
+        "T10",
+        "T11"
+      ],
+      "acs": [
+        "AC-01",
+        "AC-03",
+        "AC-04",
+        "AC-04b",
+        "AC-05",
+        "AC-06",
+        "AC-07",
+        "AC-16",
+        "AC-17"
+      ],
+      "dod": "Integration tests through the webhook (stubbed Open-Meteo + Telegram fetch, local D1) show the spec'd reply for every set-city outcome (ok, ambiguous hint, blank, too long, not found, unknown country, unavailable with \"still …\", user_limit, daily_limit), the stored row after each, and the log event's outcome and lookups.",
+      "files_hint": [
+        "src/adapters/telegram/commands/city.ts",
+        "src/adapters/telegram/bot.ts",
+        "src/adapters/telegram/replies.ts",
+        "src/worker.ts",
+        "test/integration/city.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t12-city-command.md",
+      "status": "todo"
+    },
+    {
+      "id": "T13",
+      "title": "Add the /weather command and its replies",
+      "layer": "ports",
+      "deps": [
+        "T8",
+        "T10",
+        "T11"
+      ],
+      "acs": [
+        "AC-08",
+        "AC-09",
+        "AC-10",
+        "AC-16",
+        "AC-17"
+      ],
+      "dod": "Integration tests through the webhook show the spec'd reply for ok (all fields, rounded, local reading time), no Home city (no fetch), source down/slow, user_limit and daily_limit, and the log event carries outcome, lookups and reading_time.",
+      "files_hint": [
+        "src/adapters/telegram/commands/weather.ts",
+        "src/adapters/telegram/bot.ts",
+        "src/adapters/telegram/replies.ts",
+        "src/worker.ts",
+        "test/integration/weather.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t13-weather-command.md",
+      "status": "todo"
+    },
+    {
+      "id": "T14",
+      "title": "Build the bot once per isolate and verify the per-message budgets end to end",
+      "layer": "wiring",
+      "deps": [
+        "T12",
+        "T13"
+      ],
+      "acs": [
+        "AC-14",
+        "AC-15"
+      ],
+      "dod": "worker.ts builds adapters, use cases and the Bot once per isolate (cached at module scope, nothing per-request cached) and warns once when BOT_INFO is absent; e2e tests show ≤ 1 lookup + 1 reply per scenario, exactly one update event each, two chats isolated, and a hanging source still answered.",
+      "files_hint": [
+        "src/worker.ts",
+        "test/integration/worker.smoke.test.ts",
+        "test/integration/e2e.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t14-composition-root.md",
+      "status": "todo"
+    },
+    {
+      "id": "T15",
+      "title": "Update the README for the new commands and the BOT_INFO deploy step",
+      "layer": "docs",
+      "deps": [],
+      "acs": [],
+      "dod": "README lists /start, /city <name> and /weather with examples, the status line no longer says skeleton-only, the Deploy section includes `wrangler secret put BOT_INFO` as required for production, and `prettier --check` passes.",
+      "files_hint": [
+        "README.md"
+      ],
+      "file": "docs/features/base-logic/tasks/t15-readme.md",
+      "status": "todo"
+    }
+  ]
+}
