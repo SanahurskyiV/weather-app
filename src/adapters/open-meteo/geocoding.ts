@@ -7,7 +7,17 @@ const SEARCH_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const GET_URL = "https://geocoding-api.open-meteo.com/v1/get";
 const MAX_CANDIDATES = 10;
 
-/** Maps one place entry; `undefined` when a required field is missing or mistyped. */
+/** True when the runtime can format times in this IANA zone (the weather reply needs it, AC-08). */
+function isKnownTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Maps one place entry; `undefined` when a required field is missing or mistyped, or the timezone is unknown. */
 function toCandidate(entry: unknown): PlaceCandidate | undefined {
   if (!isRecord(entry)) return undefined;
   const { id, name, admin1, country, latitude, longitude, timezone, feature_code, population } = entry;
@@ -18,7 +28,8 @@ function toCandidate(entry: unknown): PlaceCandidate | undefined {
     typeof timezone !== "string" ||
     typeof feature_code !== "string" ||
     !isFiniteNumber(latitude) ||
-    !isFiniteNumber(longitude)
+    !isFiniteNumber(longitude) ||
+    !isKnownTimeZone(timezone)
   ) {
     return undefined;
   }
@@ -52,13 +63,9 @@ export function makeOpenMeteoGeocoding(): PlaceLookup {
       if (results === undefined) return ok([]); // the source omits `results` when nothing matches
       if (!Array.isArray(results)) return err("unavailable");
 
-      const candidates: PlaceCandidate[] = [];
-      for (const entry of results) {
-        const candidate = toCandidate(entry);
-        if (!candidate) return err("unavailable");
-        candidates.push(candidate);
-      }
-      return ok(candidates);
+      // A bad entry is skipped, not fatal: one odd place must not block every retry (review R-05).
+      const candidates = results.map(toCandidate).filter((c) => c !== undefined);
+      return candidates.length > 0 || results.length === 0 ? ok(candidates) : err("unavailable");
     },
 
     async findById(id) {

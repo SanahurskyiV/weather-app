@@ -121,10 +121,38 @@ describe("Open-Meteo geocoding", () => {
     expect(await makeOpenMeteoGeocoding().find({ name: "Paris" }, "en")).toEqual(err("unavailable"));
   });
 
-  it("reports a malformed result entry as unavailable", async () => {
-    stubFetch({ results: [{ name: "Paris" }] });
+  it("reports an answer whose every entry is malformed as unavailable", async () => {
+    stubFetch({ results: [{ name: "Paris" }, { name: "Paris", country: "France" }] });
 
     expect(await makeOpenMeteoGeocoding().find({ name: "Paris" }, "en")).toEqual(err("unavailable"));
+  });
+
+  it("skips a malformed entry and keeps the valid ones (review R-05)", async () => {
+    stubFetch({
+      results: [{ id: 1, name: "Paris", latitude: 1, longitude: 2, feature_code: "PPL" }, ...paris.results],
+    });
+
+    const result = await makeOpenMeteoGeocoding().find({ name: "Paris" }, "en");
+
+    expect(result.ok && result.value.map((c) => c.id)).toEqual(paris.results.map((r) => r.id));
+  });
+
+  it("skips an entry whose timezone the runtime does not know (review R-14)", async () => {
+    const [first, ...rest] = paris.results;
+    stubFetch({ results: [{ ...first, timezone: "Mars/Olympus_Mons" }, ...rest] });
+
+    const result = await makeOpenMeteoGeocoding().find({ name: "Paris" }, "en");
+
+    expect(result.ok && result.value.map((c) => c.id)).toEqual(rest.map((r) => r.id));
+  });
+
+  it("cuts every search off after exactly 1.5 seconds (AC-04b)", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    stubFetch(paris);
+
+    await makeOpenMeteoGeocoding().find({ name: "Paris" }, "en");
+
+    expect(timeout).toHaveBeenCalledWith(1500);
   });
 
   it("gives up after 1.5 seconds and reports unavailable (AC-04b)", async () => {
@@ -183,5 +211,20 @@ describe("Open-Meteo geocoding by id", () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("Network connection lost."));
 
     expect(await makeOpenMeteoGeocoding().findById(703448)).toEqual(err("unavailable"));
+  });
+
+  it("reports a place whose timezone the runtime does not know as unavailable (review R-14)", async () => {
+    stubFetch({ ...getKyiv, timezone: "Mars/Olympus_Mons" });
+
+    expect(await makeOpenMeteoGeocoding().findById(703448)).toEqual(err("unavailable"));
+  });
+
+  it("cuts the re-fetch off after exactly 1.5 seconds (AC-04b)", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    stubFetch(getKyiv);
+
+    await makeOpenMeteoGeocoding().findById(703448);
+
+    expect(timeout).toHaveBeenCalledWith(1500);
   });
 });

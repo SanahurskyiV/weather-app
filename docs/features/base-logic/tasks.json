@@ -402,7 +402,7 @@
         "src/adapters/open-meteo/forecast.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t18-harden-open-meteo-adapters.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T19",

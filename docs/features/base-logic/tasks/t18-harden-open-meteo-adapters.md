@@ -9,8 +9,8 @@ files_hint: ["src/adapters/open-meteo/http.ts", "src/adapters/open-meteo/geocodi
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: "—"
+status: "done"
+step: "COMMIT"
 ---
 # T18 — Pin the 1.5 s cutoff and tolerate malformed geocoder entries and unknown timezones
 

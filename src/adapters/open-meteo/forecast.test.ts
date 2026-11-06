@@ -69,6 +69,15 @@ describe("Open-Meteo forecast", () => {
     expect(await makeOpenMeteoForecast().current(50.45, 30.52)).toEqual(err("unavailable"));
   });
 
+  it("cuts the call off after exactly 1.5 seconds (AC-10)", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(kyiv));
+
+    await makeOpenMeteoForecast().current(50.45, 30.52);
+
+    expect(timeout).toHaveBeenCalledWith(1500);
+  });
+
   it("gives up after 1.5 seconds and reports unavailable (AC-10)", async () => {
     hangingFetch();
 
