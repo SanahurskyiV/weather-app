@@ -22,7 +22,7 @@
 | T12 | [Add the /city command and its replies](./t12-city-command.md) | ports | Vlad S | M | T7, T10, T11, T16 | done | COMMIT |
 | T13 | [Add the /weather command and its replies](./t13-weather-command.md) | ports | Vlad S | M | T8, T10, T11 | done | COMMIT |
 | T14 | [Build the bot once per isolate and verify the per-message budgets end to end](./t14-composition-root.md) | wiring | Vlad S | M | T12, T13 | done | COMMIT |
-| T15 | [Update the README for the new commands and the BOT_INFO deploy step](./t15-readme.md) | docs | Vlad S | S | — | todo | — |
+| T15 | [Update the README for the new commands and the BOT_INFO deploy step](./t15-readme.md) | docs | Vlad S | S | — | done | COMMIT |
 | T16 | [Resolve non-Latin set-city queries with a localized search and an English re-fetch](./t16-non-latin-city-names.md) | app | Vlad S | S | T7, T10 | done | COMMIT |
 
 **Total:** 16 tasks, ~12 person-days (S ≈ ½ day, M ≈ 1 day).

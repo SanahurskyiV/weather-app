@@ -9,8 +9,8 @@ files_hint: ["README.md"]
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T15 — Update the README for the new commands and the BOT_INFO deploy step
 
