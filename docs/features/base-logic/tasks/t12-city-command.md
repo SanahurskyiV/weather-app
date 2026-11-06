@@ -9,8 +9,8 @@ files_hint: ["src/adapters/telegram/commands/city.ts", "src/adapters/telegram/bo
 owner: "Vlad S"
 estimate: "M"
 context_budget: "M"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T12 — Add the /city command and its replies
 

@@ -19,7 +19,7 @@
 | T9 | [Implement the D1 HomeCityRepo and UsageCounter adapters](./t09-d1-adapters.md) | infra | Vlad S | M | T1, T6 | done | COMMIT |
 | T10 | [Implement the Open-Meteo geocoding and forecast adapters](./t10-open-meteo-adapters.md) | infra | Vlad S | M | T6 | done | COMMIT |
 | T11 | [Build the Telegram edge: request-log middleware, chat-type split, start, help and group replies](./t11-telegram-edge.md) | ports | Vlad S | M | T6, T9 | done | COMMIT |
-| T12 | [Add the /city command and its replies](./t12-city-command.md) | ports | Vlad S | M | T7, T10, T11, T16 | todo | — |
+| T12 | [Add the /city command and its replies](./t12-city-command.md) | ports | Vlad S | M | T7, T10, T11, T16 | done | COMMIT |
 | T13 | [Add the /weather command and its replies](./t13-weather-command.md) | ports | Vlad S | M | T8, T10, T11 | todo | — |
 | T14 | [Build the bot once per isolate and verify the per-message budgets end to end](./t14-composition-root.md) | wiring | Vlad S | M | T12, T13 | todo | — |
 | T15 | [Update the README for the new commands and the BOT_INFO deploy step](./t15-readme.md) | docs | Vlad S | S | — | todo | — |

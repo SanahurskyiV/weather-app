@@ -267,7 +267,7 @@
         "test/integration/city.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t12-city-command.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T13",
