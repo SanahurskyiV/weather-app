@@ -181,7 +181,7 @@
         "test/integration/db-fixtures.ts"
       ],
       "file": "docs/features/base-logic/tasks/t09-d1-adapters.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T10",

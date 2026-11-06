@@ -9,8 +9,8 @@ files_hint: ["src/adapters/d1/home-city-repo.ts", "src/adapters/d1/usage-counter
 owner: "Vlad S"
 estimate: "M"
 context_budget: "M"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T9 — Implement the D1 HomeCityRepo and UsageCounter adapters
 
