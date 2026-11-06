@@ -157,6 +157,20 @@ describe("/city", () => {
     expect(await usage(CHAT_A)).toEqual({ daily: 0, chat: 0 });
   });
 
+  it("refuses an over-long name, keeps Kyiv and says so (AC-04, AC-05)", async () => {
+    await seedHomeCity(env.DB, { chat_id: CHAT_A });
+    const out = stubOutbound(geocoder(ANSWERS));
+    captureLogs();
+
+    await send(privateText(`/city ${"a".repeat(101)}`));
+
+    expect(out.replies).toEqual([{ chat_id: CHAT_A, text: notFoundReply(KYIV) }]);
+    expect(out.replies[0]?.text).toContain("Your city is still Kyiv");
+    expect(out.lookups).toEqual([]);
+    expect(await homeCity(CHAT_A)).toMatchObject({ name: "Kyiv" });
+    expect(await usage(CHAT_A)).toEqual({ daily: 0, chat: 0 });
+  });
+
   it("answers an unknown name with 'couldn't find', keeps Kyiv and says so (AC-04, AC-05)", async () => {
     await seedHomeCity(env.DB, { chat_id: CHAT_A });
     const out = stubOutbound(geocoder(ANSWERS));
@@ -248,8 +262,7 @@ describe("/city", () => {
 
     await send(privateText("/city Paris, Texas"));
 
-    // A parse refusal happens before the Home city is loaded, so it carries no "still …" line (SAD §8).
-    expect(out.replies).toEqual([{ chat_id: CHAT_A, text: notFoundReply(undefined) }]);
+    expect(out.replies).toEqual([{ chat_id: CHAT_A, text: notFoundReply(KYIV) }]);
     expect(out.lookups).toEqual([]);
     expect(await homeCity(CHAT_A)).toMatchObject({ name: "Kyiv" });
     expect(logs.updates()).toEqual([expect.objectContaining({ outcome: "unknown_country", lookups: 0 })]);

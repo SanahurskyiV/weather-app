@@ -424,7 +424,7 @@
         "test/integration/city.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t19-still-city-on-every-not-found.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T20",

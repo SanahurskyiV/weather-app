@@ -167,13 +167,30 @@ describe("setHomeCity", () => {
   it.each([
     ["", "blank"],
     ["   ", "blank"],
-    ["a".repeat(101), "too_long"],
-    ["Paris, Texas", "unknown_country"],
-  ])("refuses %j as %s with no counting and no lookup (AC-03, AC-04, AC-16)", async (text, kind) => {
+  ])("refuses %j as %s with no read, no counting and no lookup (AC-03, AC-16)", async (text, kind) => {
     const t = setup({ current: kyiv });
 
     expect(await t.setHomeCity(CHAT, text)).toEqual(err({ kind }));
-    expect(t.calls.filter((c) => c.startsWith("counter") || c.startsWith("lookup") || c === "repo.save")).toEqual([]);
+    expect(t.calls).toEqual([]);
+  });
+
+  it.each([
+    ["a".repeat(101), "too_long"],
+    ["Paris, Texas", "unknown_country"],
+  ])(
+    "refuses %j as %s with the current Home city, no counting and no lookup (AC-04, AC-05, AC-07, AC-16)",
+    async (text, kind) => {
+      const t = setup({ current: kyiv });
+
+      expect(await t.setHomeCity(CHAT, text)).toEqual(err({ kind, current: kyiv }));
+      expect(t.calls).toEqual([`repo.get(${String(CHAT)})`]);
+    },
+  );
+
+  it("refuses an unknown country without a current Home city when none is set (AC-07)", async () => {
+    const t = setup();
+
+    expect(await t.setHomeCity(CHAT, "Paris, Texas")).toEqual(err({ kind: "unknown_country" }));
   });
 
   it.each([

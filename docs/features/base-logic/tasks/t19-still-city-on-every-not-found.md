@@ -9,8 +9,8 @@ files_hint: ["src/app/set-home-city.ts", "src/app/set-home-city.test.ts", "src/a
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: "—"
+status: "done"
+step: "COMMIT"
 ---
 # T19 — Name the current Home city on every "couldn't find that place" reply
 

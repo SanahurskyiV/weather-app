@@ -69,7 +69,6 @@ export function setCityErrorReply(error: SetCityError): string {
       return CITY_USAGE_REPLY;
     case "too_long":
     case "unknown_country":
-      return notFoundReply(undefined);
     case "not_found":
       return notFoundReply(error.current);
     case "unavailable":

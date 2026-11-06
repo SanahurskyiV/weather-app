@@ -4,15 +4,21 @@ import { err, ok, type Result } from "../domain/result";
 import { checkLimits, type LimitVerdict } from "../domain/usage-limits";
 import type { Clock, HomeCityRepo, PlaceLookup, UsageCounter } from "./ports";
 
-/** `not_found` and `unavailable` carry the current Home city so the reply can say "your city is still …" (AC-05). */
+/** Every "couldn't find" or "unavailable" failure carries the current Home city, so the reply can say "your city is still …" (AC-05). */
 export type SetCityError =
-  | { readonly kind: "blank" | "too_long" | "unknown_country" | "user_limit" | "daily_limit" }
-  | { readonly kind: "not_found" | "unavailable"; readonly current?: Place };
+  | { readonly kind: "blank" | "user_limit" | "daily_limit" }
+  | { readonly kind: "too_long" | "unknown_country" | "not_found" | "unavailable"; readonly current?: Place };
 
 export interface SetCityResult {
   readonly place: Place;
   /** More than one populated place matched, so the reply hints at adding a country (AC-06). */
   readonly ambiguous: boolean;
+}
+
+type FailureWithCurrent = "too_long" | "unknown_country" | "not_found" | "unavailable";
+
+function withCurrent(kind: FailureWithCurrent, current: Place | undefined): SetCityError {
+  return current ? { kind, current } : { kind };
 }
 
 export interface SetHomeCityDeps {
@@ -36,11 +42,15 @@ export function makeSetHomeCity({ repo, counter, lookup, clock }: SetHomeCityDep
     onLookup: () => void = () => undefined,
   ): Promise<Result<SetCityResult, SetCityError>> => {
     const query = parseCityQuery(text);
-    if (!query.ok) return err({ kind: query.error });
+    if (!query.ok) {
+      if (query.error === "blank") return err({ kind: "blank" });
+      // Still a "couldn't find" reply, so it names the current city too (AC-05); one read, no lookup.
+      return err(withCurrent(query.error, await repo.get(chatId)));
+    }
 
     const current = await repo.get(chatId);
+    const failure = (kind: "not_found" | "unavailable"): SetCityError => withCurrent(kind, current);
     const now = clock.now();
-    const failure = (kind: "not_found" | "unavailable"): SetCityError => (current ? { kind, current } : { kind });
 
     /** Checks both limits and reserves one lookup before it is made, so failed calls count too (AC-17). */
     const reserveLookup = async (): Promise<LimitVerdict> => {
