@@ -72,7 +72,7 @@
         "src/domain/usage-limits.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t04-usage-limits.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T5",

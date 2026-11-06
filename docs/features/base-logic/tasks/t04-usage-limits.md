@@ -9,8 +9,8 @@ files_hint: ["src/domain/usage-limits.ts", "src/domain/usage-limits.test.ts"]
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T4 — Encode the lookup limits and UTC counting keys
 
