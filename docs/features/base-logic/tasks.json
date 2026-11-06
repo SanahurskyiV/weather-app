@@ -55,7 +55,7 @@
         "src/domain/place.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t03-pick-best-place.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T4",

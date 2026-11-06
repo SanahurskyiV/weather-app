@@ -9,8 +9,8 @@ files_hint: ["src/domain/place.ts", "src/domain/place.test.ts"]
 owner: "Vlad S"
 estimate: "S"
 context_budget: "M"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T3 — Pick the best-matching populated place and format its name
 
