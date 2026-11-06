@@ -9,8 +9,8 @@ files_hint: ["src/worker.ts", "test/integration/telegram-edge.test.ts", "test/in
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: "—"
+status: "done"
+step: "COMMIT"
 ---
 # T20 — Drop forged updates silently and fail closed without a webhook secret
 

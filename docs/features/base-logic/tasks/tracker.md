@@ -27,7 +27,7 @@
 | T17 | [Record the two-lookup non-Latin set-city decision in ADR-0003 and the design docs](./t17-adr-non-latin-lookups.md) | docs | Vlad S | S | T16 | done | COMMIT |
 | T18 | [Pin the 1.5 s cutoff and tolerate malformed geocoder entries and unknown timezones](./t18-harden-open-meteo-adapters.md) | infra | Vlad S | S | T10, T16 | done | COMMIT |
 | T19 | [Name the current Home city on every "couldn't find that place" reply](./t19-still-city-on-every-not-found.md) | app | Vlad S | S | T7, T12 | done | COMMIT |
-| T20 | [Drop forged updates silently and fail closed without a webhook secret](./t20-webhook-secret-fail-closed.md) | wiring | Vlad S | S | T14 | todo | — |
+| T20 | [Drop forged updates silently and fail closed without a webhook secret](./t20-webhook-secret-fail-closed.md) | wiring | Vlad S | S | T14 | done | COMMIT |
 | T21 | [Keep the real outcome when the reply fails, name the fault, and prove no secret is logged](./t21-request-log-reply-failures.md) | ports | Vlad S | M | T11 | todo | — |
 | T22 | [Let the get-current-weather use case report its lookups](./t22-weather-lookup-callback.md) | app | Vlad S | S | T8, T13 | todo | — |
 | T23 | [Use the real command in the help reply and assert nothing is stored where the plan says so](./t23-help-wording-and-storage-asserts.md) | ports | Vlad S | S | T11, T12 | todo | — |

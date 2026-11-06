@@ -45,12 +45,13 @@ describe("worker skeleton", () => {
     expect(body).toMatchObject({ chat_id: 4242, text: greetingReply(undefined) });
   });
 
-  it("rejects an update with the wrong secret token", async () => {
+  it("drops an update with the wrong secret token without saying why", async () => {
     const fetchSpy = stubTelegram();
 
     const response = await exports.default.fetch(webhookRequest("wrong-secret"));
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

@@ -444,7 +444,7 @@
         "docs/features/base-logic/sad.md"
       ],
       "file": "docs/features/base-logic/tasks/t20-webhook-secret-fail-closed.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T21",

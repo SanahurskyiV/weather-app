@@ -227,7 +227,7 @@ sequenceDiagram
     Note over C,S: Trigger: the client delivers one update for a message
     C->>S: delivers an update with the shared secret
     alt secret missing or wrong
-        S-->>C: rejects the delivery, no reply, no log event
+        S-->>C: drops it silently: bare 200 like an accepted update, no reply, no log event
     else edited message
         S->>S: writes one update log event marked as an edit
         S-->>C: acknowledges with no reply
@@ -432,7 +432,7 @@ No new deployment units. The feature ships inside the existing `weather-bot` Wor
 | Concept | Convention | Where defined |
 |---|---|---|
 | Logging | Exactly one `log("update", {...})` per update, written in `finally` by the request-log middleware. Fields: `update_id`, `is_edit` (bool), `chat`, `chat_type`, `command`, `outcome` (`ok` or a failure kind: `blank`, `too_long`, `not_found`, `unknown_country`, `unavailable`, `user_limit`, `daily_limit`, `no_home_city`, `not_understood`, `group_pointer`, `fault`), `lookups` (0, 1 or 2; ADR-0003), `duration_ms`, `reading_time` (weather only), `replied` (bool). Never the token, the secret or message text. | ADR-0002; here |
-| Authentication | The webhook accepts only updates carrying `WEBHOOK_SECRET` (grammY `secretToken`). Anything else is dropped silently, with no reply and no log event. | architecture-map §Conventions |
+| Authentication | The webhook accepts only updates carrying `WEBHOOK_SECRET`, checked in `worker.ts` with a constant-time compare before grammY runs. Anything else is dropped silently: the same bare 200 as an accepted update, no reply, no log event. With no secret configured the Worker fails closed (drops every update, logs `startup_error`). | architecture-map §Conventions |
 | Authorization | Every Home city read or write is keyed by the chat id of the incoming update; no command accepts another chat's id. Use cases are reachable only from the private-chat composer. | spec §6.1; here |
 | Composition | Adapters, use cases and the grammY `Bot` are built once per isolate from `env` and cached at module scope. Handlers close over the use cases, and nothing per-request is stored in module scope. | here |
 | Error handling | Use cases return `Result`. `SetCityError` failures `too_long`, `unknown_country`, `not_found` and `unavailable` carry the current Home city (or none) so the reply can say "your city is still …" (AC-05). `SetCityError` is `blank`, `too_long`, `unknown_country`, `not_found`, `unavailable`, `user_limit` or `daily_limit`; `WeatherError` is `no_home_city`, `unavailable`, `user_limit` or `daily_limit`. `replies.ts` maps each to plain-language text. Unexpected throws become the "something went wrong" reply plus `outcome: fault`, and the webhook still answers 200. | CLAUDE.md; here |

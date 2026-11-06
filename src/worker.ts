@@ -21,12 +21,34 @@ export interface App {
   handleUpdate(request: Request): Promise<Response>;
 }
 
+const SECRET_HEADER = "X-Telegram-Bot-Api-Secret-Token";
+
+/** What a dropped update gets: the same bare 200 as an accepted one, so a forger learns nothing (spec §6.1). */
+function dropped(): Response {
+  return new Response(null, { status: 200 });
+}
+
+/** Constant-time comparison of the secret header with the configured secret. */
+function hasSecret(request: Request, secret: string): boolean {
+  const encoder = new TextEncoder();
+  const given = encoder.encode(request.headers.get(SECRET_HEADER) ?? "");
+  const expected = encoder.encode(secret);
+  return given.byteLength === expected.byteLength && crypto.subtle.timingSafeEqual(given, expected);
+}
+
 function parseBotInfo(raw: string | undefined): UserFromGetMe | undefined {
   return raw ? (JSON.parse(raw) as UserFromGetMe) : undefined;
 }
 
 /** Builds adapters, use cases and the bot from env. Call through `getApp` outside tests. */
 export function buildApp(env: Cloudflare.Env): App {
+  // Fail closed: with no secret configured every update is dropped, never accepted (review R-07).
+  const secret = env.WEBHOOK_SECRET as string | undefined;
+  if (!secret) {
+    log("startup_error", { reason: "WEBHOOK_SECRET missing" });
+    return { handleUpdate: () => Promise.resolve(dropped()) };
+  }
+
   const botInfo = parseBotInfo(env.BOT_INFO);
   // Required for production deploys (SAD §7): without it grammY calls getMe on every cold start.
   if (!botInfo) log("startup_warning", { reason: "BOT_INFO missing" });
@@ -40,7 +62,8 @@ export function buildApp(env: Cloudflare.Env): App {
     setHomeCity: makeSetHomeCity({ repo, counter, lookup: makeOpenMeteoGeocoding(), clock }),
     getCurrentWeather: makeGetCurrentWeather({ repo, counter, weather: makeOpenMeteoForecast(), clock }),
   });
-  return { handleUpdate: webhookCallback(bot, "cloudflare-mod", { secretToken: env.WEBHOOK_SECRET }) };
+  const handle = webhookCallback(bot, "cloudflare-mod", { secretToken: secret });
+  return { handleUpdate: (request) => (hasSecret(request, secret) ? handle(request) : Promise.resolve(dropped())) };
 }
 
 let app: App | undefined;

@@ -1,7 +1,8 @@
-import { env } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FAULT_REPLY, greetingReply, groupPointerReply, HELP_REPLY } from "../../src/adapters/telegram/replies";
 import groupCommand from "../fixtures/telegram-group-command-update.json";
+import { buildApp } from "../../src/worker";
 import { resetTables, seedHomeCity } from "./db-fixtures";
 import {
   BOT_USERNAME,
@@ -16,6 +17,7 @@ import {
   privateText,
   send,
   stubOutbound,
+  webhookRequest,
 } from "./telegram-harness";
 import type { Update } from "grammy/types";
 
@@ -48,9 +50,47 @@ describe("webhook intake (flow A)", () => {
 
     const response = await send(privateText("/start"), "wrong-secret");
 
-    expect(response.status).toBe(401);
+    // Indistinguishable from an accepted update: a forger learns nothing (spec §6.1, review R-04).
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("");
     expect(out.calls).toEqual([]);
     expect(logs.updates()).toEqual([]);
+  });
+
+  it("drops an update with no secret header the same way (spec §6.1)", async () => {
+    const out = stubOutbound();
+    const logs = captureLogs();
+    const request = webhookRequest(privateText("/start"));
+    request.headers.delete("X-Telegram-Bot-Api-Secret-Token");
+
+    const response = await exports.default.fetch(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("");
+    expect(out.calls).toEqual([]);
+    expect(logs.updates()).toEqual([]);
+  });
+
+  it.each([
+    ["empty", ""],
+    ["unset", undefined],
+  ])("fails closed when WEBHOOK_SECRET is %s (review R-07)", async (_label, secret) => {
+    const out = stubOutbound();
+    const logs = captureLogs();
+    const misconfigured: Cloudflare.Env = { ...env };
+    if (secret === undefined) delete (misconfigured as Partial<Cloudflare.Env>).WEBHOOK_SECRET;
+    else misconfigured.WEBHOOK_SECRET = secret;
+    const app = buildApp(misconfigured);
+
+    const withEmpty = await app.handleUpdate(webhookRequest(privateText("/start"), ""));
+    const withAny = await app.handleUpdate(webhookRequest(privateText("/start"), "anything"));
+
+    expect([withEmpty.status, withAny.status]).toEqual([200, 200]);
+    expect(out.calls).toEqual([]);
+    expect(logs.updates()).toEqual([]);
+    expect(logs.events().filter((e) => e.event === "startup_error")).toEqual([
+      { event: "startup_error", reason: "WEBHOOK_SECRET missing" },
+    ]);
   });
 
   it("logs an edited message once, marked as an edit, and does not reply (AC-12)", async () => {
