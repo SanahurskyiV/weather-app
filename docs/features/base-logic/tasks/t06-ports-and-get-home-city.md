@@ -9,8 +9,8 @@ files_hint: ["src/app/ports.ts", "src/app/get-home-city.ts", "src/app/get-home-c
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: ""
+status: "done"
+step: "COMMIT"
 ---
 # T6 — Declare the four new ports and the get-home-city use case
 

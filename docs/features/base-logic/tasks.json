@@ -108,7 +108,7 @@
         "src/app/get-home-city.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t06-ports-and-get-home-city.md",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T7",
