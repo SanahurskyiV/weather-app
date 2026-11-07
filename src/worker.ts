@@ -7,6 +7,7 @@ import { log } from "./adapters/log";
 import { makeOpenMeteoForecast } from "./adapters/open-meteo/forecast";
 import { makeOpenMeteoGeocoding } from "./adapters/open-meteo/geocoding";
 import { createBot } from "./adapters/telegram/bot";
+import { WEBHOOK_PATH } from "./adapters/telegram/webhook-path";
 import { makeGetCurrentWeather } from "./app/get-current-weather";
 import { makeGetHomeCity } from "./app/get-home-city";
 import { makeSetHomeCity } from "./app/set-home-city";
@@ -14,8 +15,6 @@ import { makeSetHomeCity } from "./app/set-home-city";
 // Composition root: builds adapters from env and hands them to use cases (ADR-0002).
 // Everything is built once per isolate and cached at module scope (SAD §8 Composition); env does not
 // change within an isolate. Nothing per-request is ever stored here.
-
-export const WEBHOOK_PATH = "/webhook";
 
 export interface App {
   handleUpdate(request: Request): Promise<Response>;

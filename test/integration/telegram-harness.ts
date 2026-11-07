@@ -1,7 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import type { Update } from "grammy/types";
 import { vi } from "vitest";
-import { WEBHOOK_PATH } from "../../src/worker";
+import { WEBHOOK_PATH } from "../../src/adapters/telegram/webhook-path";
 import sendMessageOk from "../fixtures/telegram-send-message-ok.json";
 
 // Webhook test harness: build Telegram updates, send them through the Worker, and observe every

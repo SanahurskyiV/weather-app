@@ -3,7 +3,9 @@ import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pingDatabase } from "../../src/adapters/d1/health";
 import { greetingReply } from "../../src/adapters/telegram/replies";
-import worker, { WEBHOOK_PATH } from "../../src/worker";
+import { WEBHOOK_PATH } from "../../src/adapters/telegram/webhook-path";
+import * as mainModule from "../../src/worker";
+import worker from "../../src/worker";
 import sendMessageOk from "../fixtures/telegram-send-message-ok.json";
 import startUpdate from "../fixtures/telegram-start-update.json";
 
@@ -22,6 +24,19 @@ function stubTelegram() {
 describe("worker skeleton", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("exports only entry points from the main module, so workerd can start it", () => {
+    // workerd treats every named export of `main` as an entry point and refuses to start on anything else:
+    // "Incorrect type for map entry 'X': the provided value is not of type 'function or ExportedHandler'".
+    // The vitest pool imports the module without that check, so it is asserted here (fix 2026-11-07).
+    const kinds = Object.fromEntries(
+      Object.entries(mainModule as Record<string, unknown>).map(([name, value]) => [
+        name,
+        typeof value === "function" || (typeof value === "object" && value !== null) ? "entry point" : typeof value,
+      ]),
+    );
+    expect(kinds).toEqual(Object.fromEntries(Object.keys(mainModule).map((name) => [name, "entry point"])));
   });
 
   it("boots and answers the health check", async () => {
