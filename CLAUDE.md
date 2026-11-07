@@ -20,7 +20,8 @@ Node 26 LTS (`.nvmrc`). CI runs typecheck, lint, test and build on every push.
 - `src/domain/`: pure logic (alert rules, quiet hours, time). No I/O, no `grammy`, no `cloudflare:*`.
 - `src/app/`: use cases plus the port interfaces they need (`src/app/ports.ts`). Imports only `domain`.
 - `src/adapters/`: Telegram (grammY), Open-Meteo, D1, clock, logging. Implements ports.
-- `src/worker.ts`: composition root. Builds adapters from `env`, hand-wired, no DI container.
+- `src/composition.ts`: composition root. Builds adapters from `env`, hand-wired, no DI container.
+- `src/worker.ts`: Wrangler `main`, routing only. Export nothing but `default` (workerd treats every named export as an entry point).
 
 New bot command: `src/adapters/telegram/commands/<name>.ts`, registered in `src/adapters/telegram/bot.ts`,
 calling a use case in `src/app/`.

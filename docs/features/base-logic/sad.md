@@ -39,7 +39,7 @@ target_surfaces: [backend-service]
 - TypeScript `~6.0`, `strict`, on the Cloudflare Workers runtime (`compatibility_date = "2026-11-01"`); Node 26 LTS toolchain.
 - grammY `^1.46` via `webhookCallback(bot, "cloudflare-mod", { secretToken })`; Wrangler `^4.157`; Vitest `^5.1` with `@cloudflare/vitest-plugin`.
 - Cloudflare D1 (SQLite) as the only datastore, `DB` binding (project ADR-0003). Migrations are forward-only.
-- Ports and adapters with ESLint-enforced layers (project ADR-0002): `domain` (pure) ← `app` (use cases + ports) ← `adapters`. The composition root is `src/worker.ts`.
+- Ports and adapters with ESLint-enforced layers (project ADR-0002): `domain` (pure) ← `app` (use cases + ports) ← `adapters`. The composition root is `src/composition.ts`; `src/worker.ts` only routes.
 - Weather source: the Open-Meteo forecast and geocoding APIs. No key, non-commercial use, about 10k calls a day for both together.
 - Workers Free: 10 ms CPU per invocation, 50 subrequests per invocation. D1 Free: 5M rows read and 100k rows written a day.
 
@@ -139,7 +139,8 @@ src/
 │       ├── request-log.ts        middleware collector (ADR-0002)
 │       ├── replies.ts            every user-facing text (plain text, no parse mode)
 │       └── commands/{start,city,weather,help,group}.ts
-└── worker.ts               composition root: adapters, use cases and Bot built once per isolate from env
+├── composition.ts          composition root: adapters, use cases and Bot built once per isolate from env
+└── worker.ts               Wrangler main: routing only, exports nothing but the default handler
 migrations/NNNN_*.sql       home city + usage tables, staged by sdd:data-model
 ```
 
@@ -432,7 +433,7 @@ No new deployment units. The feature ships inside the existing `weather-bot` Wor
 | Concept | Convention | Where defined |
 |---|---|---|
 | Logging | Exactly one `log("update", {...})` per update, written in `finally` by the request-log middleware. Fields: `update_id`, `is_edit` (bool), `chat`, `chat_type`, `command`, `outcome` (`ok` or a failure kind: `blank`, `too_long`, `not_found`, `unknown_country`, `unavailable`, `user_limit`, `daily_limit`, `no_home_city`, `not_understood`, `group_pointer`, `fault`), `lookups` (0, 1 or 2; ADR-0003), `duration_ms`, `reading_time` (weather only), `replied` (bool), `reply_failed` (only when Telegram refused the reply; `outcome` then keeps the handler's result and no second reply is sent), `fault_kind` (for a `fault` or a refused reply: the error name, or the grammY method and error code, e.g. `sendMessage 403`; never the error message). Never the token, the secret or message text. | ADR-0002; here |
-| Authentication | The webhook accepts only updates carrying `WEBHOOK_SECRET`, checked in `worker.ts` with a constant-time compare before grammY runs. Anything else is dropped silently: the same bare 200 as an accepted update, no reply, no log event. With no secret configured the Worker fails closed (drops every update, logs `startup_error`). | architecture-map §Conventions |
+| Authentication | The webhook accepts only updates carrying `WEBHOOK_SECRET`, checked in `composition.ts` with a constant-time compare before grammY runs. Anything else is dropped silently: the same bare 200 as an accepted update, no reply, no log event. With no secret configured the Worker fails closed (drops every update, logs `startup_error`). | architecture-map §Conventions |
 | Authorization | Every Home city read or write is keyed by the chat id of the incoming update; no command accepts another chat's id. Use cases are reachable only from the private-chat composer. | spec §6.1; here |
 | Composition | Adapters, use cases and the grammY `Bot` are built once per isolate from `env` and cached at module scope. Handlers close over the use cases, and nothing per-request is stored in module scope. | here |
 | Error handling | Use cases return `Result`. `SetCityError` failures `too_long`, `unknown_country`, `not_found` and `unavailable` carry the current Home city (or none) so the reply can say "your city is still …" (AC-05). `SetCityError` is `blank`, `too_long`, `unknown_country`, `not_found`, `unavailable`, `user_limit` or `daily_limit`; `WeatherError` is `no_home_city`, `unavailable`, `user_limit` or `daily_limit`. `replies.ts` maps each to plain-language text. Unexpected throws become the "something went wrong" reply plus `outcome: fault`, and the webhook still answers 200. | CLAUDE.md; here |

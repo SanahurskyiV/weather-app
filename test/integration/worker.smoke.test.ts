@@ -26,17 +26,12 @@ describe("worker skeleton", () => {
     vi.restoreAllMocks();
   });
 
-  it("exports only entry points from the main module, so workerd can start it", () => {
+  it("exports only the default handler from the main module, so workerd can start it", () => {
     // workerd treats every named export of `main` as an entry point and refuses to start on anything else:
     // "Incorrect type for map entry 'X': the provided value is not of type 'function or ExportedHandler'".
-    // The vitest pool imports the module without that check, so it is asserted here (fix 2026-11-07).
-    const kinds = Object.fromEntries(
-      Object.entries(mainModule as Record<string, unknown>).map(([name, value]) => [
-        name,
-        typeof value === "function" || (typeof value === "object" && value !== null) ? "entry point" : typeof value,
-      ]),
-    );
-    expect(kinds).toEqual(Object.fromEntries(Object.keys(mainModule).map((name) => [name, "entry point"])));
+    // The vitest pool imports the module without that check, so it is asserted here (fix 2026-11-07). Even a
+    // function export would be a spurious entry point, so the composition lives elsewhere (review R3-02).
+    expect(Object.keys(mainModule)).toEqual(["default"]);
   });
 
   it("boots and answers the health check", async () => {

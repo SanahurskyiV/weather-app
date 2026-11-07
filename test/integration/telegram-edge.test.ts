@@ -2,7 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FAULT_REPLY, greetingReply, groupPointerReply, HELP_REPLY } from "../../src/adapters/telegram/replies";
 import groupCommand from "../fixtures/telegram-group-command-update.json";
-import { buildApp } from "../../src/worker";
+import { buildApp } from "../../src/composition";
 import { resetTables, seedHomeCity } from "./db-fixtures";
 import {
   BOT_USERNAME,

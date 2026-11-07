@@ -9,8 +9,8 @@ files_hint: ["src/worker.ts", "src/composition.ts", "test/integration/worker.smo
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: "—"
+status: "done"
+step: "COMMIT"
 ---
 # T25 — Move the composition out of the main module so it exports only the handler
 
@@ -21,9 +21,9 @@ step: "—"
 
 ## Checklist
 
-- [ ] RED: tighten the main-module test in `worker.smoke.test.ts` to `expect(Object.keys(mainModule)).toEqual(["default"])`.
-- [ ] Move `App`, `buildApp`, `getApp` and the cached app into `src/composition.ts` and point the tests that use `buildApp` at it. `src/worker.ts` keeps only routing plus `export default`.
+- [x] RED: tighten the main-module test in `worker.smoke.test.ts` to `expect(Object.keys(mainModule)).toEqual(["default"])`.
+- [x] Move `App`, `buildApp`, `getApp` and the cached app into `src/composition.ts` and point the tests that use `buildApp` at it. `src/worker.ts` keeps only routing plus `export default`.
 
 ## Definition of Done
 
-- [ ] `src/worker.ts` exports only `default` (asserted). The composition is still built once per isolate. `wrangler dev` starts and `/health` → 200. npm test, lint, typecheck, build green.
+- [x] `src/worker.ts` exports only `default` (asserted). The composition is still built once per isolate. `wrangler dev` starts and `/health` → 200. npm test, lint, typecheck, build green.

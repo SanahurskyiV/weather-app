@@ -549,7 +549,8 @@
         "test/integration/telegram-edge.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t25-composition-module.md",
-      "status": "todo"
+      "status": "done",
+      "step": "COMMIT"
     },
     {
       "id": "T26",
