@@ -9,8 +9,8 @@ files_hint: ["src/worker.ts", "test/integration/telegram-edge.test.ts"]
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: "—"
+status: "done"
+step: "COMMIT"
 ---
 # T24 — Check BOT_INFO and fall back to getMe when it is invalid
 
@@ -21,9 +21,9 @@ step: "—"
 
 ## Checklist
 
-- [ ] RED: a `BOT_INFO` that isn't JSON and one with the full `{"ok":true,"result":{…}}` `getMe` response each log `startup_warning` with reason `BOT_INFO invalid`, and the bot still answers (a stubbed `getMe`).
-- [ ] `parseBotInfo` checks `id` (number), `username` (string) and `is_bot === true`. An invalid value → `undefined`, so grammY calls `getMe`. No throw.
+- [x] RED: a `BOT_INFO` that isn't JSON and one with the full `{"ok":true,"result":{…}}` `getMe` response each log `startup_warning` with reason `BOT_INFO invalid`, and the bot still answers (a stubbed `getMe`).
+- [x] `parseBotInfo` checks `id` (number), `username` (string) and `is_bot === true`. An invalid value → `undefined`, so grammY calls `getMe`. No throw.
 
 ## Definition of Done
 
-- [ ] An invalid `BOT_INFO` never throws from `buildApp`. It logs `startup_warning {reason: "BOT_INFO invalid"}` once per isolate and falls back to `getMe`. The group pointer names the real username (asserted). npm test, lint, typecheck green.
+- [x] An invalid `BOT_INFO` never throws from `buildApp`. It logs `startup_warning {reason: "BOT_INFO invalid"}` once per isolate and falls back to `getMe`. The group pointer names the real username (asserted). npm test, lint, typecheck green.

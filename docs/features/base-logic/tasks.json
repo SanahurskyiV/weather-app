@@ -526,7 +526,8 @@
         "test/integration/telegram-edge.test.ts"
       ],
       "file": "docs/features/base-logic/tasks/t24-validate-bot-info.md",
-      "status": "todo"
+      "status": "done",
+      "step": "COMMIT"
     },
     {
       "id": "T25",

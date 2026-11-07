@@ -35,8 +35,21 @@ function hasSecret(request: Request, secret: string): boolean {
   return given.byteLength === expected.byteLength && crypto.subtle.timingSafeEqual(given, expected);
 }
 
-function parseBotInfo(raw: string | undefined): UserFromGetMe | undefined {
-  return raw ? (JSON.parse(raw) as UserFromGetMe) : undefined;
+type BotInfo = { kind: "ok"; info: UserFromGetMe } | { kind: "missing" } | { kind: "invalid" };
+
+/** Reads the cached getMe result. Never throws: anything that isn't a bot user is "invalid" (review R3-01). */
+function parseBotInfo(raw: string | undefined): BotInfo {
+  if (!raw) return { kind: "missing" };
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return { kind: "invalid" };
+  }
+  if (typeof value !== "object" || value === null) return { kind: "invalid" };
+  const user = value as Record<string, unknown>;
+  const valid = typeof user.id === "number" && typeof user.username === "string" && user.is_bot === true;
+  return valid ? { kind: "ok", info: value as UserFromGetMe } : { kind: "invalid" };
 }
 
 /** Builds adapters, use cases and the bot from env. Call through `getApp` outside tests. */
@@ -48,9 +61,10 @@ export function buildApp(env: Cloudflare.Env): App {
     return { handleUpdate: () => Promise.resolve(dropped()) };
   }
 
-  const botInfo = parseBotInfo(env.BOT_INFO);
-  // Required for production deploys (SAD §7): without it grammY calls getMe on every cold start.
-  if (!botInfo) log("startup_warning", { reason: "BOT_INFO missing" });
+  const parsed = parseBotInfo(env.BOT_INFO);
+  // Required for production deploys (SAD §7): without a valid one grammY calls getMe on every cold start.
+  if (parsed.kind !== "ok") log("startup_warning", { reason: `BOT_INFO ${parsed.kind}` });
+  const botInfo = parsed.kind === "ok" ? parsed.info : undefined;
 
   const clock = systemClock;
   const repo = makeD1HomeCityRepo(env.DB);

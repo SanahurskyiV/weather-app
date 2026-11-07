@@ -237,6 +237,30 @@ describe("groups and channels (AC-13)", () => {
   });
 });
 
+describe("an invalid BOT_INFO (AC-13, AC-15, review R3-01)", () => {
+  it.each([
+    ["not JSON", "weather_test_bot"],
+    ["the whole getMe response", JSON.stringify({ ok: true, result: JSON.parse(env.BOT_INFO ?? "{}") as unknown })],
+    ["a user that is not a bot", JSON.stringify({ id: 1, is_bot: false, first_name: "Human", username: "human" })],
+  ])("warns once when BOT_INFO is %s and falls back to getMe", async (_label, botInfo) => {
+    const out = stubOutbound();
+    const logs = captureLogs();
+    const misconfigured: Cloudflare.Env = { ...env, BOT_INFO: botInfo };
+
+    const app = buildApp(misconfigured);
+    const first = await app.handleUpdate(webhookRequest(groupText("/weather")));
+    const second = await app.handleUpdate(webhookRequest(groupText("/weather")));
+
+    expect([first.status, second.status]).toEqual([200, 200]);
+    expect(logs.events().filter((e) => e.event === "startup_warning")).toEqual([
+      { event: "startup_warning", reason: "BOT_INFO invalid" },
+    ]);
+    // The stubbed getMe answers with the real bot, so the pointer names its real username.
+    expect(out.calls.filter((u) => u.pathname.endsWith("/getMe"))).toHaveLength(1);
+    expect(out.replies.map((r) => r.text)).toEqual([groupPointerReply(BOT_USERNAME), groupPointerReply(BOT_USERNAME)]);
+  });
+});
+
 describe("unexpected fault (AC-15)", () => {
   it("replies 'something went wrong', logs one fault event and still answers 200", async () => {
     const out = stubOutbound();

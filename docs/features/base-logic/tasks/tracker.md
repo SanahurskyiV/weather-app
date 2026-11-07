@@ -31,7 +31,7 @@
 | T21 | [Keep the real outcome when the reply fails, name the fault, and prove no secret is logged](./t21-request-log-reply-failures.md) | ports | Vlad S | M | T11 | done | COMMIT |
 | T22 | [Let the get-current-weather use case report its lookups](./t22-weather-lookup-callback.md) | app | Vlad S | S | T8, T13 | done | COMMIT |
 | T23 | [Use the real command in the help reply and assert nothing is stored where the plan says so](./t23-help-wording-and-storage-asserts.md) | ports | Vlad S | S | T11, T12 | done | COMMIT |
-| T24 | [Check BOT_INFO and fall back to getMe when it is invalid](./t24-validate-bot-info.md) | wiring | Vlad S | S | T14 | todo | — |
+| T24 | [Check BOT_INFO and fall back to getMe when it is invalid](./t24-validate-bot-info.md) | wiring | Vlad S | S | T14 | done | COMMIT |
 | T25 | [Move the composition out of the main module so it exports only the handler](./t25-composition-module.md) | wiring | Vlad S | S | T14, T20, T24 | todo | — |
 | T26 | [Spell out secret_token in the README deploy step](./t26-readme-deploy-webhook-secret.md) | docs | Vlad S | S | T15 | todo | — |
 
