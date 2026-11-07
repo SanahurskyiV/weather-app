@@ -39,7 +39,7 @@ target_surfaces: [backend-service]
 - TypeScript `~6.0`, `strict`, on the Cloudflare Workers runtime (`compatibility_date = "2026-11-01"`); Node 26 LTS toolchain.
 - grammY `^1.46` via `webhookCallback(bot, "cloudflare-mod", { secretToken })`; Wrangler `^4.157`; Vitest `^5.1` with `@cloudflare/vitest-plugin`.
 - Cloudflare D1 (SQLite) as the only datastore, `DB` binding (project ADR-0003). Migrations are forward-only.
-- Ports and adapters with ESLint-enforced layers (project ADR-0002): `domain` (pure) ← `app` (use cases + ports) ← `adapters`. The composition root is `src/worker.ts`.
+- Ports and adapters with ESLint-enforced layers (project ADR-0002): `domain` (pure) ← `app` (use cases + ports) ← `adapters`. The composition root is `src/composition.ts`; `src/worker.ts` only routes.
 - Weather source: the Open-Meteo forecast and geocoding APIs. No key, non-commercial use, about 10k calls a day for both together.
 - Workers Free: 10 ms CPU per invocation, 50 subrequests per invocation. D1 Free: 5M rows read and 100k rows written a day.
 
@@ -105,7 +105,7 @@ C4Context
 
 **Top strategic choices:**
 
-1. **Resolve once at set-city, store the whole place.** `/city` makes the only geocoding call and stores the chosen place's English name, region, country, coordinates and IANA timezone. `/weather` never geocodes; it reads the stored coordinates and timezone. Each request therefore makes at most one lookup (spec §6 "≤ 3 outbound calls"), and alerts and quiet hours read the same stored place.
+1. **Resolve once at set-city, store the whole place.** `/city` makes the only geocoding calls and stores the chosen place's English name, region, country, coordinates and IANA timezone. `/weather` never geocodes; it reads the stored coordinates and timezone. A Latin-script name makes one lookup; a non-Latin name ("Київ") makes at most two: a search in its script's language, then an English re-fetch of the picked place ([ADR-0003](adr/0003-resolve-non-latin-names-with-a-localized-search.md)). Each request therefore stays within spec §6 "≤ 3 outbound calls", and alerts and quiet hours read the same stored place.
 2. **Usage counters in D1** ([ADR-0001](adr/0001-count-lookups-in-d1-tables.md)). A per-chat lookup log gives the rolling 60-minute cap (AC-16). A per-UTC-day counter is reserved before each lookup, which enforces the 5,000/day budget (AC-17). The checks run in a fixed order before any outbound call (§8 "Request pipeline").
 3. **One log event per update from a middleware collector** ([ADR-0002](adr/0002-emit-one-log-event-per-update-from-middleware.md)). The outermost grammY middleware owns timing and writes exactly one event in `finally`. Handlers only fill in fields.
 4. **Stateless, private-only edge.** Every update is handled on its own, with no conversation state. Chat-type filtering happens at the bot edge: the private composer serves the commands, the group composer answers the bot's own commands with the "private chat only" pointer, and everything else is ignored. Use cases never see a non-private chat.
@@ -126,11 +126,11 @@ src/
 │   └── weather.ts          CurrentWeather type; WMO code → words ("unknown conditions" fallback); whole-number rounding
 ├── app/
 │   ├── ports.ts            + PlaceLookup, WeatherProvider, HomeCityRepo, UsageCounter (Clock exists)
-│   ├── set-home-city.ts    parse → load current → limits → reserve → lookup → pick → save; Result<Place, SetCityError> (failures carry the current Home city, AC-05)
+│   ├── set-home-city.ts    parse → load current → limits → reserve → lookup → pick → (non-Latin: limits → reserve → re-fetch in English) → save; Result<Place, SetCityError> (failures carry the current Home city, AC-05)
 │   ├── get-current-weather.ts  home city? → limits → reserve → fetch; Result<{ place, weather }, WeatherError>
 │   └── get-home-city.ts    for the /start greeting (no lookup)
 ├── adapters/
-│   ├── open-meteo/geocoding.ts   PlaceLookup — top 10 candidates, language=en, optional country filter, 1.5 s timeout
+│   ├── open-meteo/geocoding.ts   PlaceLookup — find: top 10 candidates in the query's script language (en for Latin), optional country filter; findById: English names (ADR-0003); 1.5 s timeout
 │   ├── open-meteo/forecast.ts    WeatherProvider — current fields at stored coordinates, metric, 1.5 s timeout
 │   ├── d1/home-city-repo.ts      HomeCityRepo — one row per chat id, upsert replaces
 │   ├── d1/usage-counter.ts       UsageCounter — per-chat lookup log (rolling 60 min, pruned) + per-UTC-day counter (ADR-0001)
@@ -139,7 +139,8 @@ src/
 │       ├── request-log.ts        middleware collector (ADR-0002)
 │       ├── replies.ts            every user-facing text (plain text, no parse mode)
 │       └── commands/{start,city,weather,help,group}.ts
-└── worker.ts               composition root: adapters, use cases and Bot built once per isolate from env
+├── composition.ts          composition root: adapters, use cases and Bot built once per isolate from env
+└── worker.ts               Wrangler main: routing only, exports nothing but the default handler
 migrations/NNNN_*.sql       home city + usage tables, staged by sdd:data-model
 ```
 
@@ -227,7 +228,7 @@ sequenceDiagram
     Note over C,S: Trigger: the client delivers one update for a message
     C->>S: delivers an update with the shared secret
     alt secret missing or wrong
-        S-->>C: rejects the delivery, no reply, no log event
+        S-->>C: drops it silently: bare 200 like an accepted update, no reply, no log event
     else edited message
         S->>S: writes one update log event marked as an edit
         S-->>C: acknowledges with no reply
@@ -431,17 +432,17 @@ No new deployment units. The feature ships inside the existing `weather-bot` Wor
 
 | Concept | Convention | Where defined |
 |---|---|---|
-| Logging | Exactly one `log("update", {...})` per update, written in `finally` by the request-log middleware. Fields: `update_id`, `is_edit` (bool), `chat`, `chat_type`, `command`, `outcome` (`ok` or a failure kind: `blank`, `too_long`, `not_found`, `unknown_country`, `unavailable`, `user_limit`, `daily_limit`, `no_home_city`, `not_understood`, `group_pointer`, `fault`), `lookups` (0 or 1), `duration_ms`, `reading_time` (weather only), `replied` (bool). Never the token, the secret or message text. | ADR-0002; here |
-| Authentication | The webhook accepts only updates carrying `WEBHOOK_SECRET` (grammY `secretToken`). Anything else is dropped silently, with no reply and no log event. | architecture-map §Conventions |
+| Logging | Exactly one `log("update", {...})` per update, written in `finally` by the request-log middleware. Fields: `update_id`, `is_edit` (bool), `chat`, `chat_type`, `command`, `outcome` (`ok` or a failure kind: `blank`, `too_long`, `not_found`, `unknown_country`, `unavailable`, `user_limit`, `daily_limit`, `no_home_city`, `not_understood`, `group_pointer`, `fault`), `lookups` (0, 1 or 2; ADR-0003), `duration_ms`, `reading_time` (weather only), `replied` (bool), `reply_failed` (only when Telegram refused the reply; `outcome` then keeps the handler's result and no second reply is sent), `fault_kind` (for a `fault` or a refused reply: the error name, or the grammY method and error code, e.g. `sendMessage 403`; never the error message). Never the token, the secret or message text. | ADR-0002; here |
+| Authentication | The webhook accepts only updates carrying `WEBHOOK_SECRET`, checked in `composition.ts` with a constant-time compare before grammY runs. Anything else is dropped silently: the same bare 200 as an accepted update, no reply, no log event. With no secret configured the Worker fails closed (drops every update, logs `startup_error`). | architecture-map §Conventions |
 | Authorization | Every Home city read or write is keyed by the chat id of the incoming update; no command accepts another chat's id. Use cases are reachable only from the private-chat composer. | spec §6.1; here |
 | Composition | Adapters, use cases and the grammY `Bot` are built once per isolate from `env` and cached at module scope. Handlers close over the use cases, and nothing per-request is stored in module scope. | here |
-| Error handling | Use cases return `Result`. `SetCityError` failures `not_found` and `unavailable` carry the current Home city (or none) so the reply can say "your city is still …" (AC-05). `SetCityError` is `blank`, `too_long`, `unknown_country`, `not_found`, `unavailable`, `user_limit` or `daily_limit`; `WeatherError` is `no_home_city`, `unavailable`, `user_limit` or `daily_limit`. `replies.ts` maps each to plain-language text. Unexpected throws become the "something went wrong" reply plus `outcome: fault`, and the webhook still answers 200. | CLAUDE.md; here |
-| Request pipeline (order of checks) | 1. Parse the input (`blank`, `too_long`, `unknown_country`), or for `/weather` load the Home city (`no_home_city`). No lookup and no counting at this step. 2. Daily budget (`daily_limit` wins when both limits are hit). 3. Per-chat rolling 60 min (`user_limit`). 4. Reserve: increment the day counter and insert the chat log row. 5. One outbound lookup with a 1.5 s timeout. | spec AC-16/AC-17; here |
+| Error handling | Use cases return `Result`. `SetCityError` failures `too_long`, `unknown_country`, `not_found` and `unavailable` carry the current Home city (or none) so the reply can say "your city is still …" (AC-05). `SetCityError` is `blank`, `too_long`, `unknown_country`, `not_found`, `unavailable`, `user_limit` or `daily_limit`; `WeatherError` is `no_home_city`, `unavailable`, `user_limit` or `daily_limit`. `replies.ts` maps each to plain-language text. Unexpected throws become the "something went wrong" reply plus `outcome: fault`, and the webhook still answers 200. | CLAUDE.md; here |
+| Request pipeline (order of checks) | 1. Parse the input (`blank`, `too_long`, `unknown_country`; the last two read the current Home city for the reply), or for `/weather` load the Home city (`no_home_city`). No lookup and no counting at this step. 2. Daily budget (`daily_limit` wins when both limits are hit). 3. Per-chat rolling 60 min (`user_limit`). 4. Reserve: increment the day counter and insert the chat log row. 5. One outbound lookup with a 1.5 s timeout. A non-Latin set-city whose search picked a place repeats 2–5 once for the English re-fetch (ADR-0003). | spec AC-16/AC-17; here |
 | Outbound HTTP | `fetch` with `AbortSignal.timeout(1500)`. A timeout, network error or non-OK answer means `unavailable`. Open-Meteo adapters map JSON into domain types and never leak response shapes. | here |
 | Text safety | Replies are plain text (no `parse_mode`). Echoed names come from the geocoder's resolved place, not from the raw query. | spec §6.1 |
 | Time | `Clock` port only. Counters use UTC (day key `YYYY-MM-DD`, window `now − 60 min`). The reading time is shown in the Home city's IANA timezone via `Intl.DateTimeFormat`. | CLAUDE.md |
 | ID strategy | Telegram chat id is the natural key for a Home city and the lookup log. The day counter is keyed by the UTC date. | architecture-map §Conventions |
-| Internationalisation | N/A. English only, with English place names (`language=en` on geocoding). | spec §3 |
+| Internationalisation | N/A. English only, with English place names: a Latin query is searched with `language=en`; a non-Latin one in its script's language and then re-fetched with `language=en` (ADR-0003). | spec §3 |
 | Units | Metric: °C and km/h from the source, humidity in %. Values rounded to whole numbers in `domain/weather.ts`. | spec AC-08 |
 | Events | N/A. In-process calls through ports only. | architecture-map §Conventions |
 
@@ -451,6 +452,7 @@ No new deployment units. The feature ships inside the existing `weather-bot` Wor
 |---|---|---|---|
 | 0001 | Count lookups in D1 tables (per-chat lookup log + per-day counter) | Accepted | §4 |
 | 0002 | Emit one log event per update from a request-scoped middleware collector | Accepted | §4 |
+| 0003 | Resolve non-Latin city names with a localized search and an English re-fetch (post-hoc, from T16) | Accepted | §4, §5, §8 |
 
 ADR files live under `docs/features/base-logic/adr/NNNN-<title>.md`. Project-wide decisions (Workers + webhook, ports and adapters, D1) live in `docs/adr/` and are not repeated here.
 
@@ -469,7 +471,7 @@ ADR files live under `docs/features/base-logic/adr/NNNN-<title>.md`. Project-wid
 **QG-3. Fits the free plan per message**
 - **When:** any update is processed.
 - **Then:** "CPU per message ≤ 10 ms p99" and "Outbound calls per message ≤ 3 (one lookup, one reply, one spare; the platform cap is 50)".
-- **How verify:** integration tests count the stubbed outbound calls per scenario (at most 1 lookup + 1 reply). Workers analytics CPU time p99 after launch. `BOT_INFO` is set, so there is no `getMe` call on cold start.
+- **How verify:** integration tests count the stubbed outbound calls per scenario (at most 1 lookup + 1 reply; a non-Latin set-city at most 2 lookups + 1 reply, ADR-0003). Workers analytics CPU time p99 after launch. `BOT_INFO` is set, so there is no `getMe` call on cold start.
 
 Freshness ("≤ 30 min old, p95") is a monitored target only (spec §6): `reading_time` is on the event and is not enforced in code.
 

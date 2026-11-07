@@ -1,15 +1,9 @@
-import { webhookCallback } from "grammy";
-import type { UserFromGetMe } from "grammy/types";
 import { log } from "./adapters/log";
-import { createBot } from "./adapters/telegram/bot";
+import { WEBHOOK_PATH } from "./adapters/telegram/webhook-path";
+import { getApp } from "./composition";
 
-// Composition root: builds adapters from env and hands them to use cases (ADR-0002).
-
-export const WEBHOOK_PATH = "/webhook";
-
-function parseBotInfo(raw: string | undefined): UserFromGetMe | undefined {
-  return raw ? (JSON.parse(raw) as UserFromGetMe) : undefined;
-}
+// Wrangler `main`: routing only. workerd treats every named export here as an entry point, so this module
+// exports nothing but the default handler; the composition root lives in ./composition (review R3-02).
 
 export default {
   async fetch(request, env): Promise<Response> {
@@ -22,10 +16,8 @@ export default {
       return new Response("Not found", { status: 404 });
     }
 
-    const bot = createBot(env.BOT_TOKEN, parseBotInfo(env.BOT_INFO));
-    const handleUpdate = webhookCallback(bot, "cloudflare-mod", { secretToken: env.WEBHOOK_SECRET });
     try {
-      return await handleUpdate(request);
+      return await getApp(env).handleUpdate(request);
     } catch (error) {
       // Answer 200 anyway so Telegram does not keep redelivering the same update.
       log("webhook_error", { message: error instanceof Error ? error.message : String(error) });

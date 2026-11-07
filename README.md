@@ -6,8 +6,19 @@ like rain within the hour or a sharp temperature change, while respecting your q
 Runs on the Cloudflare Workers free plan: Telegram delivers updates by webhook, and a cron trigger runs
 the forecast check every 15 minutes. State lives in Cloudflare D1.
 
-> Status: project skeleton. The bot answers `/start`; weather, alerts, quiet hours and `/demo_alert`
-> are on the [roadmap](docs/roadmap.md).
+> Status: the bot sets your Home city and shows its current weather. Heads-up alerts, quiet hours and
+> `/demo_alert` are on the [roadmap](docs/roadmap.md).
+
+## Commands
+
+The bot works in private chats only; in a group it just points you to a private chat.
+
+- `/start`: how to get started, and your Home city once it is set.
+- `/city <name>`: set your Home city, for example `/city Kyiv` or `/city Київ`. When several places share a
+  name, the most populous one wins; add a country after a comma to pick another, for example `/city Paris, US`.
+- `/weather`: the current conditions in your Home city, in °C and km/h.
+
+Each person can make up to 30 lookups an hour, and the whole bot up to 5,000 a day.
 
 ## Stack
 
@@ -29,7 +40,7 @@ npm run lint
 To run the bot locally, create a bot with [@BotFather](https://t.me/BotFather), then:
 
 ```bash
-cp .dev.vars.example .dev.vars   # fill in BOT_TOKEN and WEBHOOK_SECRET
+cp .dev.vars.example .dev.vars   # fill in BOT_TOKEN and WEBHOOK_SECRET (BOT_INFO is optional)
 npm run db:migrate:local
 npm run dev                      # serves the Worker on http://localhost:8787
 ```
@@ -46,8 +57,20 @@ curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
 
 Deployment is the "Bot is live on Cloudflare" step on the [roadmap](docs/roadmap.md). In short:
 `wrangler d1 create weather-bot-db` (put the id in `wrangler.toml`), `npm run db:migrate:remote`,
-`wrangler secret put BOT_TOKEN`, `wrangler secret put WEBHOOK_SECRET`, `npm run deploy`, then `setWebhook`
-to `https://<worker>.workers.dev/webhook`.
+`wrangler secret put BOT_TOKEN`, `wrangler secret put WEBHOOK_SECRET`, `wrangler secret put BOT_INFO`,
+`npm run deploy`, then point the webhook at the Worker with the same secret:
+
+```bash
+curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
+  -d "url=https://<worker>.workers.dev/webhook" -d "secret_token=<WEBHOOK_SECRET>"
+```
+
+Without `secret_token` the Worker drops every update silently.
+
+`BOT_INFO` is required in production: it is the JSON `result` object (not the whole response) of
+`https://api.telegram.org/bot<BOT_TOKEN>/getMe`. Without it, or with an invalid one, the bot calls `getMe` on
+every cold start, which costs an extra outbound call and CPU time, and the Worker logs a `startup_warning`.
+Locally it is optional.
 
 ## Weather data
 

@@ -22,8 +22,8 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ["**/app/**", "**/adapters/**", "**/worker"],
-              message: "domain must not depend on app, adapters or the entry point.",
+              group: ["**/app/**", "**/adapters/**", "**/worker", "**/composition"],
+              message: "domain must not depend on app, adapters, the composition root or the entry point.",
             },
             { group: platformImports, message: "domain must stay free of platform and library I/O." },
           ],
@@ -39,7 +39,10 @@ export default tseslint.config(
         "error",
         {
           patterns: [
-            { group: ["**/adapters/**", "**/worker"], message: "app talks to adapters only through ports." },
+            {
+              group: ["**/adapters/**", "**/worker", "**/composition"],
+              message: "app talks to adapters only through ports.",
+            },
             { group: platformImports, message: "app must not import platform libraries; add a port instead." },
           ],
         },

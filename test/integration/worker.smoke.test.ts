@@ -2,8 +2,10 @@ import { createScheduledController } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pingDatabase } from "../../src/adapters/d1/health";
-import { START_MESSAGE } from "../../src/adapters/telegram/commands/start";
-import worker, { WEBHOOK_PATH } from "../../src/worker";
+import { greetingReply } from "../../src/adapters/telegram/replies";
+import { WEBHOOK_PATH } from "../../src/adapters/telegram/webhook-path";
+import * as mainModule from "../../src/worker";
+import worker from "../../src/worker";
 import sendMessageOk from "../fixtures/telegram-send-message-ok.json";
 import startUpdate from "../fixtures/telegram-start-update.json";
 
@@ -24,6 +26,14 @@ describe("worker skeleton", () => {
     vi.restoreAllMocks();
   });
 
+  it("exports only the default handler from the main module, so workerd can start it", () => {
+    // workerd treats every named export of `main` as an entry point and refuses to start on anything else:
+    // "Incorrect type for map entry 'X': the provided value is not of type 'function or ExportedHandler'".
+    // The vitest pool imports the module without that check, so it is asserted here (fix 2026-11-07). Even a
+    // function export would be a spurious entry point, so the composition lives elsewhere (review R3-02).
+    expect(Object.keys(mainModule)).toEqual(["default"]);
+  });
+
   it("boots and answers the health check", async () => {
     const response = await exports.default.fetch("https://bot.example/health");
     expect(response.status).toBe(200);
@@ -42,15 +52,16 @@ describe("worker skeleton", () => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     expect(url).toContain("/sendMessage");
     const body = JSON.parse(typeof init?.body === "string" ? init.body : "{}") as { chat_id: number; text: string };
-    expect(body).toMatchObject({ chat_id: 4242, text: START_MESSAGE });
+    expect(body).toMatchObject({ chat_id: 4242, text: greetingReply(undefined) });
   });
 
-  it("rejects an update with the wrong secret token", async () => {
+  it("drops an update with the wrong secret token without saying why", async () => {
     const fetchSpy = stubTelegram();
 
     const response = await exports.default.fetch(webhookRequest("wrong-secret"));
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

@@ -1,0 +1,11 @@
+{
+  "update_id": 1001,
+  "message": {
+    "message_id": 7,
+    "date": 1793865600,
+    "chat": { "id": -100500, "type": "supergroup", "title": "Friends" },
+    "from": { "id": 100001, "is_bot": false, "first_name": "Test" },
+    "text": "/city@weather_test_bot Kyiv",
+    "entities": [{ "type": "bot_command", "offset": 0, "length": 22 }]
+  }
+}

@@ -289,3 +289,99 @@ All four start at baseline 0 (new feature). The clock starts when the bot goes l
 - [x] OQ-1: Which country forms are accepted when refining a city ("US", "USA", "United States"), and how is a tie broken when candidates have no population figure (AC-06, AC-07)? Default now: a two-letter country code or the English country name; otherwise the first candidate in the source's order. — owner: Vlad S, due: during `sdd:design base-logic` — **Resolved in design (SAD §5 `domain/countries.ts`, 2026-11-05):** country = 2-letter code (any case), English short name, or aliases USA/UK; ties without population → source order.
 - [ ] OQ-2: How does a Bot user remove their Home city or stop using the bot (§3 non-goal "forget me")? Default now: no removal in step 2. — owner: Vlad S, due: before `sdd:specify` of roadmap step 3 (alerts)
 - [x] OQ-3: Should Telegram's redelivered messages be de-duplicated so each message gets exactly one reply, or is the ≥ 99% reply-rate target (§6) enough? Default now: no de-duplication; keep CPU per message under the limit so redeliveries don't happen. — owner: Vlad S, due: during `sdd:design base-logic` — **Resolved in design (SAD §11, 2026-11-05):** no de-duplication in v1; duplicates are detectable by repeated `update_id` on the log event.
+- [ ] OQ-4: Should a Cyrillic city query that finds nothing in Ukrainian be retried once in Russian (e.g. "Харьков", "Београд"), at the cost of one more counted lookup (review R-11, 2026-11-06)? Default now: no; every Cyrillic query is searched with `language=uk` only, a known v1 limitation recorded in ADR-0003. — owner: Vlad S, due: before `sdd:specify` of roadmap step 3 (alerts)
+- [ ] OQ-5: Should CI start the bundled Worker (`dist/worker.js` in workerd/Miniflare with dummy secrets and a local D1) and check that `GET /health` returns 200, so that startup failures the vitest pool cannot see break the build (review R3-03, 2026-11-07; fix `2026-11-07-worker-string-export`)? Default now: no boot check in CI; `sdd:ship` starts `wrangler dev` by hand before every release. — owner: Vlad S, due: before the roadmap's "Bot is live on Cloudflare" step
+
+## Test plan
+
+Every §5 acceptance criterion maps to at least one named test below. Levels come from a fixed vocabulary (unit, integration, e2e, contract, load). `sdd:implement` writes the red tests against this map and picks the real commands from the repo.
+
+### Levels
+
+This feature has one target surface (`backend-service`, sad.md), so there are no UI tiers.
+
+| Level | Scope | Strategy (generic, no tool names) |
+|---|---|---|
+| Unit | Pure domain rules (query parsing, countries, best match, limits, weather wording and rounding), use cases with in-memory port fakes, and the request-log collector. No I/O. | In memory, next to the code. |
+| Integration | The D1 adapters (`HomeCityRepo`, `UsageCounter`) against a real database. | The local, throwaway D1 the test runtime creates, with every migration applied. Never a mocked store. |
+| Contract | The Open-Meteo geocoding and forecast adapters at the boundary with the weather source. | Recorded source answers as JSON fixtures; assert the request we send and the domain value we map, plus every failure mode (server error, network error, timeout, unreadable answer). |
+| E2E | A signed Telegram update sent to the Worker's webhook, through the bot, use cases and local D1, to the reply. | Outbound HTTP (Telegram replies, Open-Meteo) stubbed with fixtures and counted; assert the reply text, stored state, outbound call count and the one log event. |
+| Load | The two NFRs that only a deployed Worker can show: reply time and CPU. | Pre-release only, on a preview Worker; scenario and tool in NFR validation (load) below. |
+
+### AC coverage
+
+| AC (spec.md §5) | Test name (intent-based) | Level | Expected outcome |
+|---|---|---|---|
+| AC-01 | best populated match is chosen and its full English name is formatted, region left out when missing | unit | the most populous populated place wins; the name reads "Kyiv, Kyiv City, Ukraine", or "City, Country" when there is no region |
+| AC-01 | set-city stores the best match and replies with full name, timezone and how to ask for the weather | e2e | for "Kyiv" and "Київ" the Home city is stored and the reply names "Kyiv, Kyiv City, Ukraine", its timezone and the weather command |
+| AC-02 | saving a second city for the same chat replaces the first | integration | after saving Kyiv then Lviv for one chat, only Lviv is read back and the chat has exactly one Home city |
+| AC-02 | setting a new city replaces the old one and the next weather request reports it | e2e | the set-city reply names Lviv and the following weather reply is for Lviv |
+| AC-03 | blank or spaces-only city query is refused as blank | unit | an empty query and a query of spaces or tabs both come back as a blank-name failure |
+| AC-03 | set-city with no name replies with usage and an example and changes nothing | e2e | the usage reply with an example is sent, the Home city is unchanged and no lookup is made |
+| AC-04 | query over 100 visible characters is refused, exactly 100 is accepted | unit | 100 visible characters (including multi-code-point ones) pass, 101 come back as too long |
+| AC-04 | set-city with an unknown name replies "couldn't find that place" | e2e | the not-found reply suggests checking the spelling or adding a country, and nothing is stored |
+| AC-04 | set-city with an over-long name is refused without a lookup and is not counted | e2e | the not-found reply is sent, no lookup is made and neither the per-user nor the daily count changes |
+| AC-04b | place lookup that fails, errors or exceeds 1.5 seconds is reported as unavailable, not as no match | contract | a server error, a network error and a hanging answer cut off at 1.5 seconds all come back as unavailable; only an answer with no results comes back as no match |
+| AC-04b | set-city while the place lookup is down replies "temporarily unavailable" | e2e | the reply uses the AC-10 wording, not "couldn't find that place", and nothing is stored |
+| AC-05 | failed set-city never replaces the Home city and reports the current one | unit | on no match and on unavailable, nothing is saved and the failure carries the current Home city (or none) |
+| AC-05 | Home city survives a failed set-city and the reply says so | e2e | with Kyiv stored, a not-found and an unavailable set-city both reply "your city is still Kyiv" and Kyiv stays stored |
+| AC-06 | regions and countries are never picked; the most populous populated place wins, ties keep source order | unit | a larger region or country candidate is skipped; the highest population wins; ties or missing population fall back to source order; several matches set the ambiguity flag |
+| AC-06 | place lookup maps the source's candidates into places and asks for English names and the top 10 | contract | the recorded "Paris" answer maps feature code, population, region, country, coordinates and timezone; the request asks for English names and at most 10 results |
+| AC-06 | set-city with an ambiguous name stores the most populous one and hints at adding a country | e2e | "Paris, Île-de-France, France" is stored and the reply carries its timezone and the "add a country, for example Paris, US" hint |
+| AC-07 | country after the last comma is recognised by code, English name or alias, anything else is unknown | unit | "US", "us", "United States", "USA" resolve to the United States and "UK" to the United Kingdom; "XX" and "Texas" come back as unknown country |
+| AC-07 | set-city with a country stores the most populous match in that country | e2e | "Paris, US" sends the country filter to the place lookup and stores the United States match |
+| AC-07 | set-city with an unknown country or no place in that country never falls back to another country | e2e | "Paris, Texas" replies "couldn't find that place" with no lookup; "Paris, Japan" replies "couldn't find that place" after an empty lookup; the Home city is unchanged in both |
+| AC-08 | weather reading is described in words and rounded to whole numbers | unit | known condition codes map to words and an unrecognised one to "unknown conditions"; all four numbers round to the nearest whole number and a value that rounds to zero is shown as 0, never -0; the reading time is shown in the Home city's timezone |
+| AC-08 | weather source request asks for current metric values at the stored coordinates and maps the answer | contract | the recorded answer maps to a reading with conditions, temperature, feels-like, wind in kilometres per hour, humidity and reading time; the request carries the stored coordinates and metric units |
+| AC-08 | ask for the weather replies with the full current conditions for the Home city | e2e | the reply names Kyiv, the reading time in Kyiv local time, the conditions, and "3 °C, feels like -1 °C, wind 14 kilometres per hour, humidity 81%" for the fixture |
+| AC-09 | weather request without a Home city stops before limits and lookups | unit | the result is no Home city; the limits are not read, nothing is reserved and the weather source is not called |
+| AC-09 | ask for the weather with no Home city explains how to set one and makes no lookup | e2e | the reply says no city is set yet with a set-city example; the only outbound call is the reply itself |
+| AC-10 | weather source that fails, errors, hangs past 1.5 seconds or answers malformed data is reported as unavailable | contract | a server error, a network error, a hanging answer cut off at 1.5 seconds and an unreadable answer all come back as unavailable |
+| AC-10 | ask for the weather while the source is down replies "temporarily unavailable" | e2e | exactly one reply, saying the weather is temporarily unavailable and to try again in a few minutes, with wording different from "couldn't find that place" |
+| AC-11 | start greets a new Bot user with how to set a city and ask for the weather | e2e | the greeting shows the set-city and weather commands, each with an example, and no lookup is made |
+| AC-11 | start greets a returning Bot user and names their Home city | e2e | with Kyiv stored, the same greeting also names Kyiv |
+| AC-12 | anything the bot can't use in a private chat gets the short help reply | e2e | plain text, an unknown command, a sticker, a photo, a voice note and a location pin each get one reply listing what the bot understands, including the set-city hint; nothing is stored and no lookup is made |
+| AC-12 | an edit to an already-sent message gets no reply | e2e | no reply is sent and nothing is stored |
+| AC-13 | the bot's own command in a group gets one private-chat pointer and changes nothing | e2e | the set-city and weather commands, bare and addressed to this bot, each get one reply saying the bot only works in a private chat; nothing is stored and no lookup is made |
+| AC-13 | other group traffic and channel posts get no reply | e2e | a command addressed to another bot, plain group text, the bot being added to a group and a channel post produce no reply |
+| AC-14 | saving a city for one chat never touches another chat's Home city | integration | with cities stored for two chats, replacing one leaves the other exactly as it was |
+| AC-14 | one Bot user's set-city never changes or reveals another's Home city | e2e | after B sets Paris, A's weather reply is still for Kyiv and no reply to B mentions Kyiv |
+| AC-15 | the request-log collector writes exactly one complete event for success, expected failure and unexpected fault | unit | each case writes one update event with outcome or failure kind, chat, command, lookup count and duration; a thrown fault still writes the event, marked as a fault |
+| AC-15 | every request ends in one reply and one log event, a fault replies "something went wrong", and no event carries a secret | e2e | a successful weather request, a not-found set-city, an unavailable source and a forced storage fault each get one reply, the webhook still answers success, exactly one event is logged, and no event contains the bot token or the webhook secret |
+| AC-16 | per-user cap allows the 30th lookup in 60 minutes and blocks the 31st, before any lookup | unit | 29 lookups in the window pass and 30 block as the user limit; a blocked set-city or weather request reserves nothing, makes no lookup and leaves the Home city unchanged; blank, too-long and no-Home-city requests are refused before the limits are read; the user-limit failure maps to the "too many requests, try again later" reply |
+| AC-16 | per-chat lookup log counts a rolling 60 minutes, prunes old rows and keeps chats apart | integration | with a controlled clock, a lookup exactly 60 minutes old no longer counts and one just inside the window does; reserving prunes this chat's rows older than the window; another chat's lookups never count toward this chat |
+| AC-17 | daily budget blocks at 5,000 lookups per UTC day and wins over the per-user cap | unit | 4,999 lookups today pass and 5,000 block as the daily limit; when both limits are hit the result is the daily limit; the day key switches at UTC midnight whatever the Home city's timezone; a lookup is reserved before the call, so a failed or timed-out lookup still counts |
+| AC-17 | daily counter starts at zero, increments per reservation and resets on a new UTC day | integration | a day with no row reads as 0; each reservation adds exactly 1 to today's row; the next UTC day starts again from 0 |
+| AC-17 | set-city and weather are refused bot-wide once the daily budget is used up | e2e | with today's count at 4,999 a weather request succeeds; at 5,000 both set-city and weather reply that the daily limit is reached and to try again tomorrow, with no lookup and the Home city unchanged; with the chat also at its per-user cap the reply is still the daily-limit one |
+
+### Edge cases / error paths
+
+Each error and authorization AC already has its own row above. These extra cases come from §6 and §6.1:
+
+| Case | Test name (intent-based) | Level | Expected outcome |
+|---|---|---|---|
+| Forged update: shared secret missing or wrong | forged update is dropped silently | e2e | no reply, nothing stored, no lookup and no log event |
+| City name carrying markup or control characters | city name text cannot break reply formatting | e2e | the reply is plain text and echoes only the place name the lookup resolved, never the raw query |
+| The same update delivered twice | redelivered update is detectable in the log | e2e | two log events carry the same update id (accepted risk, no de-duplication in v1) |
+| Outbound budget per message | every message stays within two lookups and one reply | e2e | each e2e scenario asserts at most one lookup (two for a non-Latin set-city, ADR-0003) and exactly one reply (or none where the AC says so), within the "≤ 3 outbound calls" NFR |
+| Bot identity not configured | missing bot identity logs a startup warning and the bot still answers | e2e | a warning event is logged once and a start greeting is still sent |
+
+### Test data
+
+- **Seed strategy:** small factories with sensible defaults for the three data-model.md entities: a Home city row (Kyiv by default), chat lookup-log rows at chosen times, and a daily counter row with a chosen count. Limit boundaries are seeded directly (29 or 30 lookup rows, a count of 4,999 or 5,000) instead of being reached by repeated requests.
+- **Fixtures:** JSON files in `test/fixtures/`. Recorded place-lookup answers for "Kyiv", "Paris" (several candidates including a region), "Paris" filtered to the United States, and an answer with no results. A recorded forecast answer for Kyiv. Telegram updates of every kind used above: start, set-city, weather, plain text, unknown command, sticker, photo, voice note, location pin, edited message, group command, command for another bot, bot added to a group, channel post.
+- **Time:** always through a controlled `Clock`, so window edges (exactly 60 minutes) and UTC midnight are set exactly.
+- **Integration dependency:** the real local, throwaway D1 with every migration applied. No mocked store.
+- **Cleanup boundary:** per test. Each test starts from empty tables, so limit counters never leak between tests. If the runtime does not isolate storage per test, clear the three tables before each test.
+
+### NFR validation (load)
+
+- **Reply time p95 ≤ 2 s and CPU per message ≤ 10 ms p99** → pre-release scenario on a preview Worker with a separate test bot and a separate test D1: send one signed update every 10 seconds for 5 minutes (30 updates, a mix of weather, set-city and start, from the Operator's own private chat), with the first update right after deploy so it hits a cold start. Assert p95 of the logged request duration ≤ 2,000 ms, CPU time p99 ≤ 10 ms in Workers analytics, and exactly one reply per update. At most 25 lookups, so the per-user cap is never hit and the weather source's daily allowance is barely touched. Tool: the load tool already in your repo, or e.g. k6 or Locust.
+- **Outbound calls per message ≤ 3** → no load run; asserted in every e2e scenario (Edge cases, "Outbound budget per message").
+- **≤ 5,000 weather-source calls a day** and **≤ 30 lookups per Bot user in 60 minutes** → no load run; verified at the boundary by the AC-17 and AC-16 rows.
+- **Freshness ≤ 30 min p95** and **reply rate ≥ 99%** → monitored in production from the log events only, as §6 states. No pre-release test.
+
+### CI placement
+
+- **On every push and PR:** unit, contract, integration and e2e, all in the existing test step. They run locally with no network, so they are fast. The slowest are the timeout scenarios (about 1.5 s each, unless a controlled timer is used).
+- **Pre-release (roadmap step 6), by hand:** the load scenario above.
