@@ -58,11 +58,19 @@ curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
 Deployment is the "Bot is live on Cloudflare" step on the [roadmap](docs/roadmap.md). In short:
 `wrangler d1 create weather-bot-db` (put the id in `wrangler.toml`), `npm run db:migrate:remote`,
 `wrangler secret put BOT_TOKEN`, `wrangler secret put WEBHOOK_SECRET`, `wrangler secret put BOT_INFO`,
-`npm run deploy`, then `setWebhook` to `https://<worker>.workers.dev/webhook`.
+`npm run deploy`, then point the webhook at the Worker with the same secret:
 
-`BOT_INFO` is required in production: it is the JSON `result` of
-`https://api.telegram.org/bot<BOT_TOKEN>/getMe`. Without it the bot calls `getMe` on every cold start, which
-costs an extra outbound call and CPU time, and the Worker logs a `startup_warning`. Locally it is optional.
+```bash
+curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
+  -d "url=https://<worker>.workers.dev/webhook" -d "secret_token=<WEBHOOK_SECRET>"
+```
+
+Without `secret_token` the Worker drops every update silently.
+
+`BOT_INFO` is required in production: it is the JSON `result` object (not the whole response) of
+`https://api.telegram.org/bot<BOT_TOKEN>/getMe`. Without it, or with an invalid one, the bot calls `getMe` on
+every cold start, which costs an extra outbound call and CPU time, and the Worker logs a `startup_warning`.
+Locally it is optional.
 
 ## Weather data
 

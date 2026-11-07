@@ -565,7 +565,8 @@
         "README.md"
       ],
       "file": "docs/features/base-logic/tasks/t26-readme-deploy-webhook-secret.md",
-      "status": "todo"
+      "status": "done",
+      "step": "COMMIT"
     }
   ]
 }

@@ -9,8 +9,8 @@ files_hint: ["README.md"]
 owner: "Vlad S"
 estimate: "S"
 context_budget: "S"
-status: "todo"
-step: "—"
+status: "done"
+step: "COMMIT"
 ---
 # T26 — Spell out secret_token in the README deploy step
 
@@ -21,8 +21,8 @@ step: "—"
 
 ## Checklist
 
-- [ ] Replace "then `setWebhook` to `https://<worker>.workers.dev/webhook`" with the full curl, including `-d "secret_token=<WEBHOOK_SECRET>"` (the same as the local recipe).
+- [x] Replace "then `setWebhook` to `https://<worker>.workers.dev/webhook`" with the full curl, including `-d "secret_token=<WEBHOOK_SECRET>"` (the same as the local recipe).
 
 ## Definition of Done
 
-- [ ] The deploy step's `setWebhook` command carries `secret_token`. `prettier --check` green. Docs only, no test (no behaviour changes).
+- [x] The deploy step's `setWebhook` command carries `secret_token`. `prettier --check` green. Docs only, no test (no behaviour changes).
