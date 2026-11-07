@@ -85,4 +85,4 @@ flowchart LR
 
 | Step | Shipped | Link |
 |---|---|---|
-| 2 · Pick a city and get the weather now | 2026-11-07 | [changelog](features/base-logic/_ship/changelog.md) · PR: pending |
+| 2 · Pick a city and get the weather now | 2026-11-07 | [changelog](features/base-logic/_ship/changelog.md) · [PR #1](https://github.com/SanahurskyiV/weather-app/pull/1) |
