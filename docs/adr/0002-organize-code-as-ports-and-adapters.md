@@ -48,6 +48,10 @@ The bot's interesting logic is the alert rules, de-duplication and quiet hours a
 **Neutral**
 - Becoming a feature-sliced layout later is a mechanical refactor.
 
+## Notes
+
+- 2026-11-07: the composition root moved from `src/worker.ts` to `src/composition.ts` (base-logic review R3-02, task T25), because workerd treats every named export of the main module as an entry point. `src/worker.ts` now only routes. The decision above is unchanged.
+
 ## Links
 
 - Idea brief: [[../idea-brief.md]] §2

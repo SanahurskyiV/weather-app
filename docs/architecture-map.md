@@ -60,16 +60,17 @@ There's a single deployable. The internal layers follow [ADR-0002](adr/0002-orga
 | Module | Path | Layers | Wired at | Responsibility |
 |---|---|---|---|---|
 | domain | `src/domain/` | domain | (pure, imported by app) | Weather snapshots, alert rules (rain soon, sharp temperature change), alert de-duplication keys, quiet-hours and timezone logic. No I/O and no platform imports. |
-| app | `src/app/` | app + ports | `src/worker.ts` | Use cases (subscribe to city, get weather now, set quiet hours, run alert check, demo alert) and the port interfaces they need (`WeatherProvider`, `SubscriptionRepo`, `AlertLog`, `Notifier`, `Clock`) |
-| adapters | `src/adapters/` | infra | `src/worker.ts` | `telegram/` (grammY bot and command handlers), `open-meteo/`, `d1/` (repos), `clock/` |
-| entry | `src/worker.ts` | composition root | Wrangler `main` in `wrangler.toml` | Builds the adapters from `env`. `fetch` goes to grammY `webhookCallback`, `scheduled` to the run-alert-check use case. |
+| app | `src/app/` | app + ports | `src/composition.ts` | Use cases (subscribe to city, get weather now, set quiet hours, run alert check, demo alert) and the port interfaces they need (`WeatherProvider`, `SubscriptionRepo`, `AlertLog`, `Notifier`, `Clock`) |
+| adapters | `src/adapters/` | infra | `src/composition.ts` | `telegram/` (grammY bot and command handlers), `open-meteo/`, `d1/` (repos), `clock/` |
+| composition | `src/composition.ts` | composition root | imported by `src/worker.ts` | Builds the adapters from `env`, by hand, and caches the app per isolate. |
+| entry | `src/worker.ts` | routing only | Wrangler `main` in `wrangler.toml` | Exports nothing but `default` (workerd treats every named export as an entry point). `fetch` goes to grammY `webhookCallback`, `scheduled` to the run-alert-check use case. |
 | migrations | `migrations/` | schema | `wrangler.toml` `[[d1_databases]]` | Versioned D1 SQL migrations |
 
 ## Conventions (cited — the rules a new feature must match)
 
 These are target conventions; the paths are created by `scaffold`.
 
-- **Module wiring:** constructor injection, done by hand in the composition root `src/worker.ts`, with no DI container. `domain` imports nothing from `app` or `adapters`, and `app` imports only `domain` and its own ports. ESLint import-boundary rules enforce this.
+- **Module wiring:** constructor injection, done by hand in the composition root `src/composition.ts`, with no DI container. `src/worker.ts` only routes and exports nothing but `default`. `domain` imports nothing from `app` or `adapters`, and `app` imports only `domain` and its own ports. ESLint import-boundary rules enforce this.
 - **Error handling:** expected failures (unknown city, provider unavailable, invalid quiet-hours input) are returned as a typed `Result<T, E>` from `src/domain/result.ts`, never thrown. Adapters turn errors into a short user-facing bot reply plus a structured `console.log(JSON)` line. Unexpected exceptions are caught once at the entry point and logged, and the webhook still returns 200 so Telegram doesn't retry-storm.
 - **IDs:** the Telegram `chat_id` is the natural key for a subscriber. A sent alert is identified by a deterministic de-duplication key (chat + alert type + forecast window), not a random ID.
 - **Time:** all stored times are UTC ISO-8601. Each user has an IANA timezone, which quiet-hours logic uses through `Intl`. Code reads time only through the `Clock` port, so tests control it.
