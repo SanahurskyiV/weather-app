@@ -508,6 +508,62 @@
       ],
       "file": "docs/features/base-logic/tasks/t23-help-wording-and-storage-asserts.md",
       "status": "done"
+    },
+    {
+      "id": "T24",
+      "title": "Check BOT_INFO and fall back to getMe when it is invalid",
+      "layer": "wiring",
+      "deps": [
+        "T14"
+      ],
+      "acs": [
+        "AC-13",
+        "AC-15"
+      ],
+      "dod": "An invalid BOT_INFO (not JSON, or the full getMe response) never throws from buildApp: it logs startup_warning {reason: \"BOT_INFO invalid\"} and falls back to getMe; the group pointer names the real username (asserted); npm test, lint, typecheck green.",
+      "files_hint": [
+        "src/worker.ts",
+        "test/integration/telegram-edge.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t24-validate-bot-info.md",
+      "status": "todo"
+    },
+    {
+      "id": "T25",
+      "title": "Move the composition out of the main module so it exports only the handler",
+      "layer": "wiring",
+      "deps": [
+        "T14",
+        "T20",
+        "T24"
+      ],
+      "acs": [
+        "AC-15"
+      ],
+      "dod": "src/worker.ts exports only default (asserted with Object.keys); buildApp/getApp live in src/composition.ts and the app is still built once per isolate; wrangler dev starts and /health returns 200; npm test, lint, typecheck, build green.",
+      "files_hint": [
+        "src/worker.ts",
+        "src/composition.ts",
+        "test/integration/worker.smoke.test.ts",
+        "test/integration/telegram-edge.test.ts"
+      ],
+      "file": "docs/features/base-logic/tasks/t25-composition-module.md",
+      "status": "todo"
+    },
+    {
+      "id": "T26",
+      "title": "Spell out secret_token in the README deploy step",
+      "layer": "docs",
+      "deps": [
+        "T15"
+      ],
+      "acs": [],
+      "dod": "The README deploy step gives the full setWebhook curl with -d \"secret_token=<WEBHOOK_SECRET>\"; prettier --check green.",
+      "files_hint": [
+        "README.md"
+      ],
+      "file": "docs/features/base-logic/tasks/t26-readme-deploy-webhook-secret.md",
+      "status": "todo"
     }
   ]
 }
